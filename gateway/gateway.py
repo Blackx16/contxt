@@ -17,8 +17,18 @@ from .rules import rule_hits
 
 
 class Tier(str, Enum):
-    PRIVATE = "PRIVATE"
-    SHARED = "SHARED"
+    # Values ARE the wire contract (schema/context_card.schema.json). Parse once here,
+    # serialize with no transform anywhere downstream — "parse, don't validate".
+    PRIVATE = "private"
+    SHARED = "shared"
+
+    @classmethod
+    def _missing_(cls, value):
+        # Boundary parser: tolerate model/legacy casing ("PRIVATE", "Shared")
+        # but canonicalize to the single lowercase representation.
+        if isinstance(value, str):
+            return cls(value.lower()) if value.lower() != value else None
+        return None
 
 
 @dataclass
@@ -32,7 +42,7 @@ class Decision:
 # The prompt the local/cloud Gemma is given for nuanced classification.
 GEMMA_SYSTEM_PROMPT = (
     "You are a privacy gateway. Classify this personal data item. "
-    "Output JSON: {tier: PRIVATE|SHARED, sensitivity: 0-1, categories: [], reason: ''}. "
+    "Output JSON: {tier: private|shared, sensitivity: 0-1, categories: [], reason: ''}. "
     "The user marks these categories as always-private: {policy}."
 )
 
@@ -57,7 +67,7 @@ def classify(item, private_keywords=None, gemma=None) -> Decision:
 
     out = gemma(text)
     return Decision(
-        Tier(out.get("tier", "SHARED")),
+        Tier(out.get("tier", "shared")),
         float(out.get("sensitivity", 0.0)),
         out.get("categories", []),
         out.get("reason", ""),

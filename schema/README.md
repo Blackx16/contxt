@@ -41,7 +41,10 @@ Maps 1:1 to `gateway.Decision`.
 
 ## Conventions (locked)
 - `tier` and `source` are **lowercase** enums in the wire contract.
-  `gateway.Decision.tier` is the `Tier` enum — serialize as `.value.lower()`.
+  Per _[parse, don't validate](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/)_,
+  the `Tier` enum **value IS the wire value** (`"private"` / `"shared"`) — parse once at the
+  Gateway boundary, serialize with no transform. `Tier._missing_` tolerates model/legacy casing
+  (`"PRIVATE"`) at the boundary but canonicalizes to the single lowercase representation.
 - `sensitivity_score` is the one name (not `sensitivity`) across card + envelope.
 - `id` format: `card_<uuidv4>`.
 - Timestamps: ISO 8601 / RFC 3339, UTC (`...Z`).
