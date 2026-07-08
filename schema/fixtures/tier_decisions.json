@@ -1,0 +1,30 @@
+[
+  {
+    "tier": "private",
+    "sensitivity_score": 1.0,
+    "categories": ["money", "account", "kw:loan", "kw:emi"],
+    "reason": "matched deterministic rule(s)",
+    "source_ref": "gmail_thr_icici_emi"
+  },
+  {
+    "tier": "private",
+    "sensitivity_score": 0.92,
+    "categories": ["health", "kw:report"],
+    "reason": "matched deterministic rule(s)",
+    "source_ref": "gmail_thr_clinic_followup"
+  },
+  {
+    "tier": "shared",
+    "sensitivity_score": 0.05,
+    "categories": [],
+    "reason": "no rule hit; low sensitivity",
+    "source_ref": "gcal_evt_abc123"
+  },
+  {
+    "tier": "shared",
+    "sensitivity_score": 0.1,
+    "categories": ["work"],
+    "reason": "gemma: general project notes, safe to share",
+    "source_ref": "notion_pg_arch_001"
+  }
+]

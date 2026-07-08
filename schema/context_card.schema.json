@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contxt.dev/schema/context_card.schema.json",
+  "title": "Contxt shared contract",
+  "description": "The single data contract every Contxt piece builds against: context cards, the Gateway tier-decision envelope, and MCP tool I/O. Define once, freeze early — Pipeline, MCP, and UI code against this (and the mock fixtures) until real data flows.",
+  "$defs": {
+    "Tier": {
+      "type": "string",
+      "description": "PRIVATE = crown jewels (local + E2E encrypted, cloud stores ciphertext only). SHARED = cloud-readable, any AI can use it.",
+      "enum": ["private", "shared"]
+    },
+    "Source": {
+      "type": "string",
+      "description": "The ingestion connector the item came from.",
+      "enum": ["gmail", "calendar", "notion"]
+    },
+    "EntityType": {
+      "type": "string",
+      "enum": ["person", "org", "date", "money", "location", "email", "phone", "url", "misc"]
+    },
+    "Entity": {
+      "type": "object",
+      "description": "A structured entity extracted during distillation.",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "$ref": "#/$defs/EntityType" },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    },
+    "Encryption": {
+      "type": "object",
+      "description": "Present only on PRIVATE cards at rest in the cloud blind relay. AES-256-GCM payload; the cloud never holds the key. When present, `summary`/`body` are null.",
+      "additionalProperties": false,
+      "required": ["alg", "iv", "ciphertext"],
+      "properties": {
+        "alg": { "type": "string", "const": "AES-256-GCM" },
+        "iv": { "type": "string", "description": "base64url-encoded 96-bit nonce" },
+        "ciphertext": { "type": "string", "description": "base64url-encoded ciphertext of the card content JSON" },
+        "key_ref": {
+          "type": ["string", "null"],
+          "description": "Client-side key identifier (ECDH-derived). Never a raw key. Null before key agreement."
+        }
+      }
+    },
+    "ContextCard": {
+      "type": "object",
+      "description": "One distilled unit of context. SHARED cards are served over MCP as-is; PRIVATE cards are decrypted client-side and never leave the device in plaintext.",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "tier",
+        "source",
+        "title",
+        "summary",
+        "body",
+        "entities",
+        "sensitivity_score",
+        "created_at",
+        "embedding_ref"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable card id. Convention: `card_<uuidv4>`.",
+          "pattern": "^card_[0-9a-fA-F-]{8,}$"
+        },
+        "tier": { "$ref": "#/$defs/Tier" },
+        "source": { "$ref": "#/$defs/Source" },
+        "title": {
+          "type": "string",
+          "description": "Short human label for the card.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "summary": {
+          "type": ["string", "null"],
+          "description": "The distilled, model-written summary — the primary field an AI consumes. Null iff the card is encrypted at rest (see `encryption`)."
+        },
+        "body": {
+          "type": ["string", "null"],
+          "description": "Optional fuller distilled text. Null when not distilled or when encrypted at rest."
+        },
+        "entities": {
+          "type": "array",
+          "description": "Structured entities extracted during distillation. May be empty.",
+          "items": { "$ref": "#/$defs/Entity" }
+        },
+        "sensitivity_score": {
+          "type": "number",
+          "description": "Gateway's 0..1 sensitivity estimate that drove the tier decision.",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO 8601 / RFC 3339 UTC timestamp.",
+          "format": "date-time"
+        },
+        "embedding_ref": {
+          "type": ["string", "null"],
+          "description": "Pointer to this card's vector in the store, e.g. `vec:shared:00001`. Null for PRIVATE cards (indexed on-device only) or before indexing."
+        },
+        "encryption": {
+          "description": "Present only for PRIVATE cards stored in the cloud blind relay.",
+          "oneOf": [{ "$ref": "#/$defs/Encryption" }, { "type": "null" }]
+        },
+        "meta": {
+          "type": ["object", "null"],
+          "description": "Free-form connector metadata (thread id, event id, page id, etc.). Not part of the frozen shape.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "TierDecision": {
+      "type": "object",
+      "description": "What the Crown-Jewels Gateway emits per ingested item, BEFORE distillation. Deterministic rules or Gemma produce it. Maps 1:1 to gateway.Decision.",
+      "additionalProperties": false,
+      "required": ["tier", "sensitivity_score", "categories", "reason"],
+      "properties": {
+        "tier": { "$ref": "#/$defs/Tier" },
+        "sensitivity_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "categories": {
+          "type": "array",
+          "description": "Rule categories (money, card, account, phone, health) and/or keyword hits (kw:loan) and/or Gemma categories.",
+          "items": { "type": "string" }
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable justification, e.g. 'matched deterministic rule(s)'."
+        },
+        "source_ref": {
+          "type": ["string", "null"],
+          "description": "Optional pointer back to the ingested item this decision is about."
+        }
+      }
+    },
+    "GetContextRequest": {
+      "type": "object",
+      "description": "MCP `get_context` input.",
+      "additionalProperties": false,
+      "required": ["query"],
+      "properties": {
+        "query": { "type": "string", "minLength": 1 },
+        "limit": {
+          "type": "integer",
+          "description": "Max cards to return.",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 8
+        }
+      }
+    },
+    "GetContextResponse": {
+      "type": "object",
+      "description": "MCP `get_context` output. Only SHARED cards are ever served from the cloud.",
+      "additionalProperties": false,
+      "required": ["cards"],
+      "properties": {
+        "cards": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ContextCard" }
+        }
+      }
+    },
+    "DraftReplyRequest": {
+      "type": "object",
+      "description": "MCP `draft_reply` input — the demo's one agentic action.",
+      "additionalProperties": false,
+      "required": ["email"],
+      "properties": {
+        "email": { "type": "string", "minLength": 1, "description": "The email text to reply to." },
+        "max_words": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 150 }
+      }
+    },
+    "DraftReplyResponse": {
+      "type": "object",
+      "description": "MCP `draft_reply` output.",
+      "additionalProperties": false,
+      "required": ["draft", "used_card_ids"],
+      "properties": {
+        "draft": { "type": "string" },
+        "used_card_ids": {
+          "type": "array",
+          "description": "ids of the context cards that grounded the draft.",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "$comment": "Root ref points at ContextCard so a bare document validates as a single card; the reusable shapes live under $defs.",
+  "$ref": "#/$defs/ContextCard"
+}
