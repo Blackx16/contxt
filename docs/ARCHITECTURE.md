@@ -1,23 +1,55 @@
 # Contxt — Architecture
 
 ## Two-tier context model
-- **PRIVATE (crown jewels):** local Gemma distills, client-side E2E encryption, cloud stores ciphertext only (blind relay for multi-device sync). Zero-knowledge.
-- **SHARED:** cloud Gemma distills, light encryption at rest, cloud-readable so any AI can use it.
 
-## Crown-Jewels Gateway (the router)
-Runs on-device — it is the trust boundary, so nothing leaves before it decides.
-1. Deterministic rules force PRIVATE for obvious crown jewels (money, account/card numbers, phone, health, user keywords).
-2. Gemma classifies the rest: `{tier, sensitivity, categories, reason}`.
-Users control policy via simple toggles (never share: finance / family / clients).
+```mermaid
+flowchart TD
+    S[Gmail / Calendar / Notion] --> G{Crown-Jewels Gateway<br/>Gemma tags each item}
+    G -->|PRIVATE tier| P[Local Gemma distills]
+    P --> E1[E2E encrypt · user key]
+    E1 --> R[(Cloud = blind relay<br/>ciphertext only)]
+    R --> DV[Any device decrypts locally<br/>local model uses it]
+    G -->|SHARED tier| H[Cloud Gemma distills]
+    H --> E2[Light encrypt at rest]
+    E2 --> CS[(Cloud store · cloud-readable)]
+    CS --> AI[Any AI · Claude / ChatGPT / Gemini]
+    DV --> AI
+```
 
-## Classification prompt
-`You are a privacy gateway. Output JSON {tier, sensitivity, categories, reason}. Always-private: {policy}.`
+## Tier definitions
+
+| Tier | Processing | Storage | Who can read |
+| --- | --- | --- | --- |
+| **PRIVATE** | Local Gemma on-device | Cloud = ciphertext only (blind relay) | Local model on your device only |
+| **SHARED** | Cloud Gemma (Fireworks / AMD) | Cloud store, light encryption at rest | Any AI via MCP |
+
+## Crown-Jewels Gateway
+
+Runs **on-device** — trust boundary. Nothing leaves before this decision.
+
+1. Deterministic rules — force `PRIVATE` for money, card numbers, phone, health, user keywords.
+2. Gemma classification — `{tier, sensitivity, categories, reason}` with user toggle policy.
 
 ## Encryption
-Web Crypto API: AES-256-GCM for card content; ECDH (X25519) for key agreement; QR code to transfer the key to a second device. PRIVATE cards are encrypted client-side before any upload.
+
+- AES-256-GCM + ECDH (X25519) via Web Crypto API.
+- Multi-device: QR code key transfer. Cloud stores ciphertext only.
 
 ## Local model
-Gemma 3 270M (Q4) via Transformers.js + WebGPU inside an MV3 offscreen document; weights cached in OPFS. Fallback: Ollama sidecar.
 
-## Deferred (roadmap)
-Full local-everything · libsignal · desktop app (Tauri) · mobile on-device (Gemma 3n) · fine-tuned 270M classifier.
+- Gemma 3 270M (Q4) via Transformers.js + WebGPU in MV3 offscreen document.
+- Weights cached in OPFS. Fallback: Ollama sidecar.
+
+## Cloud model
+
+- Gemma on Fireworks / AMD Dev Cloud — SHARED tier + `draft_reply`.
+- Qualifies for the $2,000 AMD-hosted Gemma prize.
+
+## MCP tools
+
+- `get_context(query)` — SHARED context cards.
+- `draft_reply(email)` — one agentic action for the demo.
+
+## Roadmap (out of hackathon scope)
+
+Full local-everything · Sesame key ratcheting · Tauri desktop app · mobile on-device Gemma 3n · fine-tuned 270M classifier.
