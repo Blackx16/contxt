@@ -1,0 +1,140 @@
+/* Contxt — global design tokens + base styles.
+   Demo-presentable dark theme. PRIVATE = amber "crown jewels", SHARED = teal. */
+
+:root {
+	--bg: #0a0b0f;
+	--bg-elev: #12141b;
+	--surface: #161923;
+	--surface-2: #1c2030;
+	--border: #262a38;
+	--border-strong: #333849;
+
+	--text: #e8eaf0;
+	--text-muted: #9aa2b4;
+	--text-faint: #6b7284;
+
+	--brand: #6d6bff;
+	--brand-soft: rgba(109, 107, 255, 0.14);
+
+	--private: #f5b544;
+	--private-soft: rgba(245, 181, 68, 0.13);
+	--private-border: rgba(245, 181, 68, 0.35);
+
+	--shared: #39d0a8;
+	--shared-soft: rgba(57, 208, 168, 0.12);
+	--shared-border: rgba(57, 208, 168, 0.32);
+
+	--radius: 14px;
+	--radius-sm: 9px;
+	--shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+	--font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
+	--mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font);
+	-webkit-font-smoothing: antialiased;
+	line-height: 1.5;
+}
+
+body {
+	background-image:
+		radial-gradient(900px 500px at 15% -10%, rgba(109, 107, 255, 0.10), transparent 60%),
+		radial-gradient(800px 500px at 95% 0%, rgba(57, 208, 168, 0.07), transparent 55%);
+	background-attachment: fixed;
+	min-height: 100vh;
+}
+
+a {
+	color: var(--brand);
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+}
+
+h1,
+h2,
+h3 {
+	margin: 0;
+	letter-spacing: -0.02em;
+	font-weight: 650;
+}
+
+.container {
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 0 24px;
+}
+
+/* Buttons */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 18px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border-strong);
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	font-weight: 550;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.btn:hover {
+	background: #232838;
+}
+.btn:active {
+	transform: translateY(1px);
+}
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.btn-primary {
+	background: var(--brand);
+	border-color: var(--brand);
+	color: #fff;
+}
+.btn-primary:hover {
+	background: #5a58f0;
+}
+
+/* Tag chips */
+.tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	border: 1px solid transparent;
+}
+.tag-private {
+	color: var(--private);
+	background: var(--private-soft);
+	border-color: var(--private-border);
+}
+.tag-shared {
+	color: var(--shared);
+	background: var(--shared-soft);
+	border-color: var(--shared-border);
+}
+
+.mono {
+	font-family: var(--mono);
+}
