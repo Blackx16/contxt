@@ -209,6 +209,7 @@ if __name__ == "__main__":
         print("Install deps first: pip install -r server/requirements.txt")
         sys.exit(1)
     if not _SCHEMA_OK:
-        print("Warning: pydantic not installed — schema validation disabled")
-    print("Starting Contxt MCP server…")
+        # NB: never write to stdout — it is the stdio JSON-RPC channel. Logs → stderr.
+        print("Warning: pydantic not installed — schema validation disabled", file=sys.stderr)
+    print("Starting Contxt MCP server…", file=sys.stderr)
     app.run()
