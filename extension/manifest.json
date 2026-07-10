@@ -6,5 +6,8 @@
   "permissions": ["storage", "offscreen"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_title": "Contxt" }
+  "action": { "default_title": "Contxt", "default_popup": "popup.html" },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
 }

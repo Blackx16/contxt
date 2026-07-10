@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 13px/1.4 -apple-system, system-ui, sans-serif;
+        width: 340px;
+        margin: 0;
+        padding: 14px;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 2px;
+      }
+      .sub { color: #888; font-size: 11px; margin: 0 0 12px; }
+      label { display: block; font-weight: 600; margin: 10px 0 4px; }
+      textarea, input {
+        width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      textarea { resize: vertical; min-height: 54px; }
+      button {
+        margin-top: 10px;
+        width: 100%;
+        padding: 8px;
+        font: inherit;
+        font-weight: 600;
+        border: 0;
+        border-radius: 6px;
+        background: #4f46e5;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #status { margin-top: 8px; font-size: 11px; color: #888; min-height: 14px; }
+      #result { margin-top: 10px; }
+      .card {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 10px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        letter-spacing: 0.03em;
+      }
+      .PRIVATE { background: #fee2e2; color: #b91c1c; }
+      .SHARED { background: #dcfce7; color: #15803d; }
+      .row { margin-top: 8px; font-size: 12px; }
+      .k { color: #888; }
+      .cats { font-family: ui-monospace, monospace; font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <h1>Contxt — Crown-Jewels Gateway</h1>
+    <p class="sub">On-device PRIVATE vs SHARED classifier</p>
+
+    <label for="text">Item text</label>
+    <textarea id="text">Your ICICI loan EMI of Rs 45,000 is due in 10 days</textarea>
+
+    <label for="toggles">Force-private keywords (comma-separated)</label>
+    <input id="toggles" placeholder="e.g. standup, financials" />
+
+    <button id="go">Classify</button>
+    <div id="status"></div>
+    <div id="result"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

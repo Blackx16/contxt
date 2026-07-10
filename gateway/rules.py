@@ -6,7 +6,21 @@ model misjudgment can never leak a crown jewel (belt-and-suspenders).
 import re
 
 _PATTERNS = {
-    "money": re.compile(r"(₹|rs\.?|inr|\$)\s?\d[\d,]*", re.I),
+    # Currency symbol/code + number, OR number + currency/magnitude word, OR a
+    # bare magnitude word — catches "Rs 45,000", "$2.5M", "5000 dollars", and
+    # "lost millions in sales".
+    "money": re.compile(
+        r"(₹|rs\.?|inr|usd|eur|gbp|\$|€|£)\s?\d[\d,.]*"
+        r"|\b\d[\d,.]*\s?(k|m|bn|dollars?|rupees?|euros?|pounds?|lakhs?|crores?)\b"
+        r"|\b(millions?|billions?|trillions?|lakhs?|crores?)\b",
+        re.I,
+    ),
+    # Business crown jewels — err PRIVATE (safe default).
+    "finance": re.compile(
+        r"\b(revenue|sales|profit|turnover|salary|payroll|invoice|earnings"
+        r"|valuation|funding|acquisition|net\s?worth)\b",
+        re.I,
+    ),
     "card": re.compile(r"\b(?:\d[ -]?){13,16}\b"),
     "account": re.compile(r"\b(a/c|acct|account)\b.*\d{4,}", re.I),
     "phone": re.compile(r"\b(?:\+?91[- ]?)?[6-9]\d{9}\b"),

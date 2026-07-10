@@ -7,7 +7,14 @@
  */
 
 const PATTERNS = {
-  money:   /(?:₹|rs\.?|inr|\$)\s?\d[\d,]*/i,
+  // Currency symbol/code + number, OR number + currency/magnitude word,
+  // OR a bare magnitude word (million/billion/lakh/crore) — catches
+  // "Rs 45,000", "$2.5M", "5000 dollars", and "lost millions in sales".
+  money:
+    /(?:₹|rs\.?|inr|usd|eur|gbp|\$|€|£)\s?\d[\d,.]*|\b\d[\d,.]*\s?(?:k|m|bn|dollars?|rupees?|euros?|pounds?|lakhs?|crores?)\b|\b(?:millions?|billions?|trillions?|lakhs?|crores?)\b/i,
+  // Business crown jewels — revenue, deals, comp. Err PRIVATE (safe default).
+  finance:
+    /\b(?:revenue|sales|profit|turnover|salary|payroll|invoice|earnings|valuation|funding|acquisition|net\s?worth)\b/i,
   card:    /\b(?:\d[ -]?){13,16}\b/,
   account: /\b(?:a\/c|acct|account)\b.*\d{4,}/i,
   phone:   /\b(?:\+?91[- ]?)?[6-9]\d{9}\b/,

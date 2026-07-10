@@ -10,6 +10,14 @@
  * 2. Pass 2: Gemma 270M via Transformers.js + WebGPU — nuanced tier/reason.
  * 3. Override: user privacy-toggle categories force PRIVATE unconditionally.
  *
+ * Listener readiness
+ * ------------------
+ * Transformers.js (~888 KB + WASM) is imported LAZILY inside loadClassifier(),
+ * NOT at the top of the module. That way the onMessage listener below is
+ * registered the instant the offscreen document is created — no window where
+ * the doc exists but can't yet receive messages ("Receiving end does not
+ * exist"). The deterministic fallback is also available immediately.
+ *
  * Weight caching
  * --------------
  * Transformers.js caches model weights in the browser's Cache API after the
@@ -21,22 +29,33 @@
  * rules result is returned with a note — no crash, sane decisions.
  */
 
-import {
-  pipeline,
-  env,
-} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/dist/transformers.min.js';
 import { classifyFallback, ruleHits, DEFAULT_PRIVATE_KEYWORDS } from './rules.js';
 
-// ── Transformers.js config ────────────────────────────────────────────────────
-
-// Cache downloaded weights so the user only pays the download cost once.
-env.useBrowserCache = true;
-// Disable Node.js fs — we're in a browser context.
-env.useFS = false;
+// ── Lazy Transformers.js loader ───────────────────────────────────────────────
 
 // Gemma 3 270M Q4 ONNX model on Hugging Face.
 // Weights are ~270 MB on first load; subsequent loads are from Cache API.
 const MODEL_ID = 'onnx-community/gemma-3-270m-it-ONNX';
+
+let _tf = null;
+async function getTransformers() {
+  if (_tf) return _tf;
+  // Heavy import — deferred until the first time we actually need the model.
+  _tf = await import('./transformers.min.js');
+  const { env } = _tf;
+  env.useBrowserCache = true; // cache weights after first download
+  env.useFS = false; // browser context, no Node fs
+
+  // MV3 `script-src 'self'` blocks importing the ONNX runtime from a CDN.
+  // Serve the self-hosted copies in ./ort/ instead — chrome-extension:// is
+  // the 'self' origin, so the .jsep.mjs import is allowed.
+  env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL('ort/');
+  // Offscreen docs are not cross-origin isolated, so SharedArrayBuffer (and
+  // thus multi-threading) is unavailable — pin to a single thread.
+  env.backends.onnx.wasm.numThreads = 1;
+
+  return _tf;
+}
 
 // ── Classifier state ──────────────────────────────────────────────────────────
 
@@ -62,6 +81,17 @@ async function loadClassifier() {
     return null;
   }
 
+  const { pipeline } = await getTransformers();
+  // Diagnostic: the only WebGPU wasm build transformers ships is threaded, which
+  // needs SharedArrayBuffer → needs cross-origin isolation. If this logs
+  // `crossOriginIsolated=false SharedArrayBuffer=undefined`, THAT is why the
+  // model aborts in an offscreen doc.
+  console.info(
+    '[contxt] env check — crossOriginIsolated=%s SharedArrayBuffer=%s webgpu=%s',
+    self.crossOriginIsolated,
+    typeof SharedArrayBuffer,
+    !!navigator.gpu,
+  );
   console.info('[contxt] Loading Gemma 3 270M (Q4) via WebGPU…');
   _classifier = await pipeline('text-generation', MODEL_ID, {
     dtype: 'q4',
@@ -134,7 +164,15 @@ async function classifyText(text, privateKeywords = DEFAULT_PRIVATE_KEYWORDS) {
 
     console.warn('[contxt] Gemma output unparseable — using fallback', generated.slice(0, 100));
   } catch (err) {
-    console.warn('[contxt] Gemma inference error — using fallback:', err);
+    // ONNX-runtime WASM aborts throw a bare number (a pointer), which stringifies
+    // to something useless like "10736504". Decode it so the log is actionable.
+    const detail =
+      typeof err === 'number'
+        ? `WASM abort (code ${err}) — ONNX runtime crashed during load/inference. ` +
+          `Check the [contxt] env check line above: if crossOriginIsolated is ` +
+          `false, the threaded WebGPU build can't get SharedArrayBuffer here.`
+        : err?.stack || err?.message || String(err);
+    console.warn('[contxt] Gemma inference error — using fallback:', detail);
   }
 
   return fallback;
@@ -150,12 +188,17 @@ async function classifyText(text, privateKeywords = DEFAULT_PRIVATE_KEYWORDS) {
  * @param {{ tier, sensitivity, categories, reason }} result
  * @param {string[]} privateToggles - user-configured forced-private terms
  */
-function applyToggles(result, privateToggles = []) {
+function applyToggles(result, privateToggles = [], text = '') {
   if (!privateToggles.length) return result;
 
-  const combined = [...result.categories, result.reason].join(' ').toLowerCase();
+  // Match toggles against BOTH the item text and the derived categories/reason,
+  // so "force-private: financials" fires whether the word is in the item or in
+  // a rule category.
+  const haystack = [text, ...result.categories, result.reason]
+    .join(' ')
+    .toLowerCase();
   for (const toggle of privateToggles) {
-    if (combined.includes(toggle.toLowerCase())) {
+    if (haystack.includes(toggle.toLowerCase())) {
       return {
         ...result,
         tier: 'PRIVATE',
@@ -167,7 +210,7 @@ function applyToggles(result, privateToggles = []) {
   return result;
 }
 
-// ── Message handler ───────────────────────────────────────────────────────────
+// ── Message handler (registered synchronously — always ready) ──────────────────
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== 'classify:offscreen') return false;
@@ -179,9 +222,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   } = msg;
 
   classifyText(text, privateKeywords)
-    .then((result) => applyToggles(result, privateToggles))
+    .then((result) => applyToggles(result, privateToggles, text))
     .then((result) => sendResponse({ ok: true, ...result }))
     .catch((err) => sendResponse({ ok: false, error: String(err) }));
 
   return true; // keep channel open for async sendResponse
 });
+
+// ── Dev/test hook ──────────────────────────────────────────────────────────────
+// Call directly from the offscreen document's DevTools console — no message
+// plumbing, tests rules + toggles + Gemma end to end:
+//   await __contxtClassify('Your ICICI loan EMI of Rs 45,000 is due')
+//   await __contxtClassify('Team standup 10am', { privateToggles: ['standup'] })
+globalThis.__contxtClassify = (text, opts = {}) =>
+  classifyText(text, opts.privateKeywords).then((r) =>
+    applyToggles(r, opts.privateToggles || [], text),
+  );
+
+console.info('[contxt] offscreen classifier ready (listener registered)');

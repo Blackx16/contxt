@@ -18,15 +18,31 @@
 
 const OFFSCREEN_URL = 'offscreen.html';
 
+// Guard against the MV3 race where two rapid classify messages both pass the
+// hasDocument() check and both call createDocument → "Only a single offscreen
+// document may be created". Concurrent callers await the same creation promise.
+let _creating = null;
+
 async function ensureOffscreen() {
-  const has = await chrome.offscreen?.hasDocument?.();
-  if (has) return;
-  await chrome.offscreen.createDocument({
-    url: OFFSCREEN_URL,
-    reasons: ['WORKERS'],
-    justification:
-      'Run the on-device Gemma 3 270M privacy classifier via WebGPU.',
-  });
+  if (await chrome.offscreen?.hasDocument?.()) return;
+  if (_creating) return _creating;
+
+  _creating = chrome.offscreen
+    .createDocument({
+      url: OFFSCREEN_URL,
+      reasons: ['WORKERS'],
+      justification:
+        'Run the on-device Gemma 3 270M privacy classifier via WebGPU.',
+    })
+    .catch((err) => {
+      // Benign if another context created it first; re-throw anything else.
+      if (!String(err).includes('single offscreen document')) throw err;
+    })
+    .finally(() => {
+      _creating = null;
+    });
+
+  return _creating;
 }
 
 async function getPrivacyState() {
@@ -39,6 +55,16 @@ async function getPrivacyState() {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // ── ensure:offscreen ────────────────────────────────────────────────────────
+  // The popup calls this so it can then message the offscreen doc directly,
+  // keeping the ephemeral service worker out of the slow classify round-trip.
+  if (msg?.type === 'ensure:offscreen') {
+    ensureOffscreen()
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+
   // ── classify ──────────────────────────────────────────────────────────────
   if (msg?.type === 'classify') {
     Promise.all([ensureOffscreen(), getPrivacyState()])
