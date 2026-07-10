@@ -92,6 +92,13 @@ class GetContextRequest(BaseModel):
 class GetContextResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     cards: list[ContextCard] = Field(default_factory=list)
+    # Metadata echoed alongside the cards. Optional, so a bare {cards: [...]}
+    # still validates.
+    query: Optional[str] = None
+    total: Optional[int] = Field(default=None, ge=0)
+    # Present on the SHARED-only browser path (server/http_bridge.py):
+    private_withheld: Optional[int] = Field(default=None, ge=0)
+    private_total: Optional[int] = Field(default=None, ge=0)
 
 
 class DraftReplyRequest(BaseModel):

@@ -20,6 +20,11 @@ retrieved context straight into a cloud AI (Claude / ChatGPT / Gemini web). The
 crown jewels physically cannot leak through here — the route never serializes
 them. That is the whole Contxt thesis, enforced at the transport boundary.
 
+Cross-origin lockdown: responses are readable cross-origin only by trusted
+browser origins (chrome-extension://, localhost) — never a blanket "*", so an
+arbitrary website that reaches the loopback port cannot read your SHARED cards.
+Set CONTXT_BRIDGE_TOKEN to additionally require an X-Contxt-Token on data routes.
+
 Routes
 ------
   GET  /health                         → { ok, shared, private }
@@ -56,6 +61,23 @@ except Exception:  # pragma: no cover
 
 DEFAULT_PORT = int(os.getenv("CONTXT_BRIDGE_PORT", "8787"))
 
+# CORS: only browser origins we trust may read responses cross-origin. The MV3
+# background worker (extension origin) fetches with host_permissions and needs
+# no CORS at all, so a random website that reaches 127.0.0.1 gets no
+# Access-Control-Allow-Origin header and the browser blocks it from reading the
+# body. Non-browser clients (curl) send no Origin and are unaffected.
+_ALLOWED_ORIGIN_PREFIXES = (
+    "chrome-extension://",
+    "moz-extension://",
+    "http://localhost",
+    "http://127.0.0.1",
+)
+
+# Optional shared secret. When CONTXT_BRIDGE_TOKEN is set, data routes require it
+# via the X-Contxt-Token header (or ?token=). Unset (default) → no token check;
+# the origin restriction above is the baseline guard.
+_TOKEN = os.getenv("CONTXT_BRIDGE_TOKEN") or None
+
 
 class BridgeHandler(BaseHTTPRequestHandler):
     server_version = "ContxtBridge/1.0"
@@ -63,12 +85,26 @@ class BridgeHandler(BaseHTTPRequestHandler):
     # ── low-level helpers ──────────────────────────────────────────────────────
 
     def _cors(self) -> None:
-        # The extension reaches us from the background service worker (which has
-        # host_permissions), but permissive CORS also lets you curl/test from a
-        # page or the web app during the demo.
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        # Never a blanket "*": that would let ANY website the user visits fetch
+        # 127.0.0.1:8787 and read their SHARED context cards. Only echo an
+        # allow-origin for trusted browser origins (the extension / localhost).
+        # The MV3 background worker fetches with host_permissions and needs no
+        # CORS at all; a random site gets no header and the browser blocks it.
+        origin = self.headers.get("Origin")
+        if origin and origin.startswith(_ALLOWED_ORIGIN_PREFIXES):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Contxt-Token")
+
+    def _authorized(self, params: dict | None = None) -> bool:
+        # Optional shared-secret gate. Off unless CONTXT_BRIDGE_TOKEN is set.
+        if not _TOKEN:
+            return True
+        supplied = self.headers.get("X-Contxt-Token")
+        if not supplied and params:
+            supplied = (params.get("token") or [None])[0]
+        return supplied == _TOKEN
 
     def _json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -104,15 +140,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
             return self._json({"ok": True, **counts})
 
         if route == "/get_context":
+            if not self._authorized(params):
+                return self._json({"error": "unauthorized"}, 401)
             query = (params.get("query", [""])[0]).strip()
             try:
                 limit = int(params.get("limit", ["8"])[0])
             except ValueError:
                 limit = 8
             # include_private=False → SHARED only + private_withheld count.
-            payload = context_payload(query, limit, include_private=False)
-            payload.setdefault("source", "bridge")
-            return self._json(payload)
+            return self._json(context_payload(query, limit, include_private=False))
 
         return self._json({"error": f"unknown route {route}"}, 404)
 
@@ -126,6 +162,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
             return self._json({"error": "invalid JSON body"}, 400)
 
         if route == "/draft_reply":
+            if not self._authorized():
+                return self._json({"error": "unauthorized"}, 401)
             email = str(body.get("email", "")).strip()
             if not email:
                 return self._json({"error": "missing 'email' field"}, 400)
@@ -153,6 +191,11 @@ def serve(port: int = DEFAULT_PORT) -> None:
     print(
         "[contxt-bridge] /get_context serves SHARED cards only — "
         "PRIVATE plaintext never crosses this bridge.",
+        file=sys.stderr,
+    )
+    print(
+        "[contxt-bridge] CORS locked to extension/localhost origins"
+        + (" · token required" if _TOKEN else " · no token (set CONTXT_BRIDGE_TOKEN to require one)"),
         file=sys.stderr,
     )
     try:

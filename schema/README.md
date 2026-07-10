@@ -36,8 +36,8 @@ What the Crown-Jewels Gateway emits **per ingested item, before distillation**:
 Maps 1:1 to `gateway.Decision`.
 
 ### 3. MCP tool I/O
-- `get_context(query, limit?) -> { cards: ContextCard[] }` — SHARED cards only.
-- `draft_reply(email, max_words?) -> { draft, used_card_ids[] }` — the demo's agentic action.
+- `get_context(query, limit?) -> { cards: ContextCard[], total?, private_withheld?, private_total? }` — the SHARED-only browser path adds the private counts.
+- `draft_reply(email, max_words?) -> { draft, used_card_ids[], private_cards_excluded }` — the demo's agentic action.
 
 ## Conventions (locked)
 - `tier` and `source` are **lowercase** enums in the wire contract.

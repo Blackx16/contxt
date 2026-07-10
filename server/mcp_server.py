@@ -248,19 +248,28 @@ def context_payload(query: str, limit: int = 8, *, include_private: bool = True)
     if not _SCHEMA_OK:
         return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
 
-    cards = _search_cards(query, min(max(limit, 1), 50))
+    limit = min(max(limit, 1), 50)
 
     if include_private:
+        cards = _search_cards(query, limit)
         result = [_card_to_dict(c) for c in cards]
         return {"cards": result, "query": query, "total": len(result)}
 
-    shared = [c for c in cards if c.tier == Tier.SHARED]
-    withheld = len(cards) - len(shared)
+    # Browser path: rank a generous candidate set, filter to SHARED, and only
+    # THEN apply the limit. Filtering before limiting matters — otherwise a query
+    # with several matching PRIVATE cards ranked ahead of the SHARED ones would
+    # starve the injectable set (the top-`limit` slice could be all private,
+    # leaving too few — or zero — shared cards to serve).
+    ranked = _search_cards(query, 50)
+    shared = [c for c in ranked if c.tier == Tier.SHARED]
+    withheld = len(ranked) - len(shared)  # PRIVATE cards that matched THIS query
+    shared = shared[:limit]
+
     payload = {
         "cards": [_card_to_dict(c) for c in shared],
         "query": query,
         "total": len(shared),
-        "private_withheld": withheld,  # PRIVATE cards that matched THIS query
+        "private_withheld": withheld,
     }
     # Always-on trust signal: how many crown jewels live on-device in total,
     # independent of whether they matched the query. The badge shows this.

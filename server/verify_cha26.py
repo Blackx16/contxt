@@ -67,7 +67,6 @@ def main() -> int:
         st, headers, ctx = _get("/get_context?query=" + urllib.parse.quote("what am I working on"))
         assert st == 200, f"get_context status {st}"
         assert "application/json" in headers.get("Content-Type", ""), "not JSON"
-        assert headers.get("Access-Control-Allow-Origin") == "*", "missing CORS header"
         cards = ctx.get("cards", [])
         assert cards, "expected at least one SHARED card to inject"
         assert all(c["tier"] == "shared" for c in cards), "non-SHARED card served to the browser!"
@@ -78,6 +77,21 @@ def main() -> int:
         )
         for c in cards:
             print(f"     [{c['tier']:6}] {c['source']:8} {c['title'][:44]}")
+
+        # 2b) CORS is locked down — no blanket "*". An arbitrary website that
+        #     reaches the loopback port gets no allow-origin header (the browser
+        #     blocks it from reading the SHARED cards); the extension origin does.
+        def _acao(origin: str):
+            r = urllib.request.Request(BASE + "/get_context?query=x")
+            r.add_header("Origin", origin)
+            with urllib.request.urlopen(r, timeout=10) as resp:
+                return resp.headers.get("Access-Control-Allow-Origin")
+
+        assert _acao("https://evil.example") is None, \
+            "SHARED context is readable cross-origin by an arbitrary website!"
+        assert (_acao("chrome-extension://abc123") or "").startswith("chrome-extension://"), \
+            "the extension origin should be allowed to read the bridge"
+        print("2b. CORS locked to extension/localhost origins — no blanket '*' ✓")
 
         # 3) MONEY-SHOT: a PRIVATE query. The crown jewel is counted as withheld,
         #    and its plaintext never appears in the served cards.

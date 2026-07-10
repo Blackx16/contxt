@@ -70,7 +70,11 @@ export interface GetContextRequest {
 }
 
 export interface GetContextResponse {
-  cards: ContextCard[]; // SHARED cards only
+  cards: ContextCard[]; // SHARED cards only on the browser/HTTP path
+  query?: string;
+  total?: number;
+  private_withheld?: number; // SHARED-only browser path: PRIVATE matches withheld
+  private_total?: number; // SHARED-only browser path: total PRIVATE on-device
 }
 
 export interface DraftReplyRequest {
@@ -81,4 +85,5 @@ export interface DraftReplyRequest {
 export interface DraftReplyResponse {
   draft: string;
   used_card_ids: string[];
+  private_cards_excluded?: number; // PRIVATE cards retrieved locally but withheld from the cloud model
 }

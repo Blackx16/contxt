@@ -22,10 +22,10 @@ const OFFSCREEN_URL = 'offscreen.html';
 // (browsers can't speak MCP stdio). Overridable via chrome.storage.local.
 const DEFAULT_BRIDGE = 'http://127.0.0.1:8787';
 
-async function getBridgeUrl() {
+async function getBridgeConfig() {
   return new Promise((resolve) => {
-    chrome.storage.local.get({ bridgeUrl: DEFAULT_BRIDGE }, (s) =>
-      resolve(s.bridgeUrl || DEFAULT_BRIDGE),
+    chrome.storage.local.get({ bridgeUrl: DEFAULT_BRIDGE, bridgeToken: '' }, (s) =>
+      resolve({ url: s.bridgeUrl || DEFAULT_BRIDGE, token: s.bridgeToken || '' }),
     );
   });
 }
@@ -102,14 +102,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // injects something. Payload is SHARED-only + private counts either way.
   if (msg?.type === 'get:context') {
     const query = (msg.query || 'what am I working on').toString();
-    getBridgeUrl()
-      .then((base) => {
+    getBridgeConfig()
+      .then(({ url: base, token }) => {
         const url =
           base.replace(/\/$/, '') +
           '/get_context?query=' +
           encodeURIComponent(query) +
           '&limit=6';
-        return fetch(url).then((r) => {
+        const opts = token ? { headers: { 'X-Contxt-Token': token } } : undefined;
+        return fetch(url, opts).then((r) => {
           if (!r.ok) throw new Error('bridge HTTP ' + r.status);
           return r.json();
         });
