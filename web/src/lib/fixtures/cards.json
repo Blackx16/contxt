@@ -70,5 +70,54 @@
     "embedding_ref": "local:vec:00004",
     "encryption": null,
     "meta": { "thread_id": "gmail_thr_clinic_followup", "rule_hits": ["health", "kw:report"] }
+  },
+  {
+    "id": "card_9f1c2a44-0005-4a10-8b21-000000000005",
+    "tier": "shared",
+    "source": "calendar",
+    "title": "Kickoff call — Acme Retail",
+    "summary": "Kickoff call with our new client Acme Retail to walk through the onboarding plan and the project timeline.",
+    "body": "Intro to the Acme Retail team. Agenda: scope, deliverables, and the rollout schedule for the pilot.",
+    "entities": [
+      { "type": "org", "value": "Acme Retail" },
+      { "type": "misc", "value": "onboarding" }
+    ],
+    "sensitivity_score": 0.18,
+    "created_at": "2026-07-09T06:00:00Z",
+    "embedding_ref": "vec:shared:00005",
+    "encryption": null,
+    "meta": { "event_id": "gcal_evt_acme_kickoff" }
+  },
+  {
+    "id": "card_9f1c2a44-0006-4a10-8b21-000000000006",
+    "tier": "shared",
+    "source": "gmail",
+    "title": "School pickup + family dinner Sunday",
+    "summary": "Reminder to pick up the kids from school at 3, then family dinner at home on Sunday.",
+    "body": "Don't forget the parent-teacher note. Grandparents joining for dinner.",
+    "entities": [
+      { "type": "date", "value": "Sunday" }
+    ],
+    "sensitivity_score": 0.15,
+    "created_at": "2026-07-09T05:20:00Z",
+    "embedding_ref": "vec:shared:00006",
+    "encryption": null,
+    "meta": { "thread_id": "gmail_thr_school_reminder" }
+  },
+  {
+    "id": "card_9f1c2a44-0007-4a10-8b21-000000000007",
+    "tier": "shared",
+    "source": "notion",
+    "title": "Q3 budget priorities — draft",
+    "summary": "Draft the Q3 budget priorities and expense split before the team offsite.",
+    "body": "Rough allocation across roadmap bets. Tighten the expense categories after the planning session.",
+    "entities": [
+      { "type": "misc", "value": "Q3 planning" }
+    ],
+    "sensitivity_score": 0.2,
+    "created_at": "2026-07-09T05:45:00Z",
+    "embedding_ref": "vec:shared:00007",
+    "encryption": null,
+    "meta": { "page_id": "notion_pg_q3_budget" }
   }
 ]

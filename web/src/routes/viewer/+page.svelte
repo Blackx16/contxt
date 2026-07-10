@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import CardItem from '$lib/components/CardItem.svelte';
+	import PrivacyToggles from '$lib/components/PrivacyToggles.svelte';
 	import {
 		loadCards,
 		connectedSources,
@@ -9,14 +10,18 @@
 		lockCard,
 		getEncryptedBlob,
 		cryptoReady,
-		getKeyForDisplay
+		getKeyForDisplay,
+		activeCategoryIds
 	} from '$lib/state.svelte';
 	import type { Tier } from '$lib/types';
 
 	type Filter = 'all' | Tier;
 	let filter = $state<Filter>('all');
 	let showKey = $state(false);
+	let showPrivacy = $state(true);
 	let decryptingId = $state<string | null>(null);
+
+	const activeRules = $derived(activeCategoryIds().length);
 
 	const cards = $derived(loadCards());
 	const connected = $derived(connectedSources());
@@ -57,6 +62,16 @@
 		</p>
 	</div>
 	<div class="head-right">
+		{#if cards.length}
+			<button
+				class="chip chip-key"
+				class:active={activeRules > 0}
+				onclick={() => (showPrivacy = !showPrivacy)}
+				title="Privacy controls"
+			>
+				Privacy rules{activeRules > 0 ? ` · ${activeRules}` : ''}
+			</button>
+		{/if}
 		{#if cryptoReady.value}
 			<button class="chip chip-key" onclick={() => (showKey = !showKey)} title="Key management">
 				🔑 {showKey ? 'Hide key' : 'Key sync'}
@@ -82,6 +97,10 @@
 			Set <strong>CONTXT_PRIVATE_KEY=</strong>&lt;above&gt; in .env, then restart the MCP server.
 		</p>
 	</div>
+{/if}
+
+{#if showPrivacy && cards.length}
+	<PrivacyToggles />
 {/if}
 
 {#if cards.length === 0}

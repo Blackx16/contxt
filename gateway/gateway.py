@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .policy import keywords_for
 from .rules import rule_hits
 
 
@@ -47,14 +48,22 @@ GEMMA_SYSTEM_PROMPT = (
 )
 
 
-def classify(item, private_keywords=None, gemma=None) -> Decision:
+def classify(item, private_keywords=None, policy=None, gemma=None) -> Decision:
     """Classify a single ingested item.
 
-    item:  {"text": str, "source": "gmail|calendar|notion", ...}
-    gemma: optional callable(text) -> {"tier","sensitivity","categories","reason"}
-           (cloud Gemma on Fireworks/AMD, or local Gemma via the extension).
+    item:   {"text": str, "source": "gmail|calendar|notion", ...}
+    policy: optional list of active UI privacy-toggle ids (see policy.py). When
+            given, its category keywords become the private_keywords override —
+            this is how the UI toggles feed the Gateway as hard overrides.
+    gemma:  optional callable(text) -> {"tier","sensitivity","categories","reason"}
+            (cloud Gemma on Fireworks/AMD, or local Gemma via the extension).
     """
     text = item.get("text", "")
+
+    # UI privacy toggles → private_keywords (hard overrides). An explicit
+    # private_keywords list still wins if a caller passes one directly.
+    if policy is not None and private_keywords is None:
+        private_keywords = keywords_for(policy)
 
     # Pass 1 — deterministic guardrails.
     hits = rule_hits(text, private_keywords)

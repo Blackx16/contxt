@@ -32,8 +32,15 @@ DEFAULT_PRIVATE_KEYWORDS = ["salary", "loan", "emi", "family", "school", "client
 
 
 def rule_hits(text, private_keywords=None):
-    """Return the list of rule categories that force this item PRIVATE."""
-    private_keywords = private_keywords or DEFAULT_PRIVATE_KEYWORDS
+    """Return the list of rule categories that force this item PRIVATE.
+
+    private_keywords semantics:
+      None  -> use DEFAULT_PRIVATE_KEYWORDS (no UI policy supplied).
+      []    -> no keyword overrides (every toggle is off); patterns still apply.
+      [...] -> exactly this policy, from the UI privacy toggles.
+    """
+    if private_keywords is None:
+        private_keywords = DEFAULT_PRIVATE_KEYWORDS
     text = text or ""
     hits = [name for name, pat in _PATTERNS.items() if pat.search(text)]
     lowered = text.lower()

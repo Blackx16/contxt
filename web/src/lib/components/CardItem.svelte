@@ -17,6 +17,13 @@
 	const isLocked = $derived(isPrivate && !card.summary && !card.body);
 	const pct = $derived(Math.round(card.sensitivity_score * 100));
 
+	// Set when a user privacy toggle (not the base gateway decision) forced this private.
+	const override = $derived(
+		(card.meta && typeof card.meta === 'object'
+			? ((card.meta as Record<string, unknown>)._override ?? null)
+			: null) as { categories: string[]; reason: string } | null
+	);
+
 	function shortCipher(c: string): string {
 		return c.length > 64 ? c.slice(0, 64) + '…' : c;
 	}
@@ -31,6 +38,16 @@
 	</header>
 
 	<h3 class="card-title">{card.title}</h3>
+
+	{#if override}
+		<p class="rule-note mono">
+			<svg class="note-mark" viewBox="0 0 16 16" aria-hidden="true">
+				<path d="M8 2 L14 13 H2 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+				<path d="M8 6.5 V9.5 M8 11 v0.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+			</svg>
+			{override.reason}
+		</p>
+	{/if}
 
 	{#if isLocked && encryptedBlob}
 		<!-- Locked PRIVATE card — show the ciphertext blob (the money-shot) -->
@@ -135,6 +152,20 @@
 	.card-title {
 		font-size: 1.08rem;
 		line-height: 1.3;
+	}
+	.rule-note {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		margin: -4px 0 0;
+		color: var(--gold);
+		font-size: 0.7rem;
+		letter-spacing: 0.02em;
+	}
+	.note-mark {
+		width: 13px;
+		height: 13px;
+		flex-shrink: 0;
 	}
 	.summary {
 		margin: 0;

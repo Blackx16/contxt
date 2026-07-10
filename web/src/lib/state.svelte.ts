@@ -15,6 +15,13 @@ import type { ContextCard, Source } from './types';
 import type { EncryptedPayload } from './crypto';
 import { encryptPayload, decryptPayload } from './crypto';
 import { init as initKeystore, getKey, isReady, exportForQR } from './keystore';
+import {
+	effectiveTier,
+	matchedCategories,
+	cardText,
+	PRIVACY_CATEGORIES,
+	type PrivacyCategoryId
+} from './gateway';
 import cardsFixture from './fixtures/cards.json';
 
 export type ConnStatus = 'idle' | 'connecting' | 'connected';
@@ -125,6 +132,29 @@ export async function initCrypto(): Promise<void> {
 	}
 
 	cryptoReady.value = true;
+	// Seal any base-SHARED card that a persisted privacy toggle now forces PRIVATE.
+	await resealForPolicy();
+}
+
+/**
+ * Seal (encrypt in-browser) every base-SHARED card that the ACTIVE privacy policy
+ * now forces PRIVATE. Called after initCrypto and after each toggle flip. Blobs are
+ * kept once created, so re-enabling a toggle re-locks instantly without re-encrypting.
+ */
+async function resealForPolicy(): Promise<void> {
+	if (!cryptoReady.value) return;
+	const key = getKey();
+	const active = activeCategoryIds();
+	for (const card of cardsFixture as ContextCard[]) {
+		if (card.tier !== 'shared' || card.id in encryptedBlobs) continue;
+		if (effectiveTier('shared', cardText(card), active).tier !== 'private') continue;
+		const secret: CardSecret = {
+			summary: card.summary,
+			body: card.body,
+			entities: card.entities as ContextCard['entities']
+		};
+		encryptedBlobs[card.id] = await encryptPayload(secret, key);
+	}
 }
 
 /**
@@ -162,23 +192,123 @@ export function getKeyForDisplay(): string {
 	return isReady() ? exportForQR() : '';
 }
 
+// ── privacy policy toggles (CHA-24) ────────────────────────────────────────────
+//
+// The non-technical control surface for the Gateway. Each toggle is a plain-language
+// category (see gateway.ts). Turning one ON feeds its keywords to the Gateway as a
+// HARD OVERRIDE: any matching SHARED item is forced PRIVATE and sealed on-device.
+// Toggling OFF reverts the item to the Gateway's own decision. State persists across
+// reload; a toggle only ever tightens, never loosens.
+
+const POLICY_STORAGE_KEY = 'contxt.policy.v1';
+
+function emptyPolicy(): Record<PrivacyCategoryId, boolean> {
+	return Object.fromEntries(PRIVACY_CATEGORIES.map((c) => [c.id, false])) as Record<
+		PrivacyCategoryId,
+		boolean
+	>;
+}
+
+function loadPersistedPolicy(): Record<PrivacyCategoryId, boolean> {
+	const base = emptyPolicy();
+	if (typeof localStorage === 'undefined') return base;
+	try {
+		const raw = localStorage.getItem(POLICY_STORAGE_KEY);
+		if (!raw) return base;
+		const saved = JSON.parse(raw) as Partial<Record<PrivacyCategoryId, boolean>>;
+		return { ...base, ...saved };
+	} catch {
+		return base;
+	}
+}
+
+export const policy = $state<Record<PrivacyCategoryId, boolean>>(loadPersistedPolicy());
+
+function persistPolicy(): void {
+	if (typeof localStorage === 'undefined') return;
+	localStorage.setItem(POLICY_STORAGE_KEY, JSON.stringify(policy));
+}
+
+export function isPolicyActive(id: PrivacyCategoryId): boolean {
+	return !!policy[id];
+}
+
+export function activeCategoryIds(): PrivacyCategoryId[] {
+	return PRIVACY_CATEGORIES.map((c) => c.id).filter((id) => policy[id]);
+}
+
+/** How many currently-connected SHARED cards this category would protect if enabled. */
+export function policyAffectedCount(id: PrivacyCategoryId): number {
+	const connected = new Set(connectedSources());
+	return (cardsFixture as ContextCard[]).filter(
+		(c) =>
+			c.tier === 'shared' &&
+			connected.has(c.source) &&
+			matchedCategories(cardText(c), [id]).length > 0
+	).length;
+}
+
+/** Distinct connected SHARED cards currently forced PRIVATE by one or more active toggles. */
+export function overrideProtectedCount(): number {
+	const active = activeCategoryIds();
+	if (active.length === 0) return 0;
+	const connected = new Set(connectedSources());
+	return (cardsFixture as ContextCard[]).filter(
+		(c) =>
+			c.tier === 'shared' &&
+			connected.has(c.source) &&
+			effectiveTier('shared', cardText(c), active).tier === 'private'
+	).length;
+}
+
+/** Flip one category and re-seal anything it now forces private. */
+export async function togglePolicy(id: PrivacyCategoryId): Promise<void> {
+	policy[id] = !policy[id];
+	persistPolicy();
+	await resealForPolicy();
+}
+
 // ── card loading ──────────────────────────────────────────────────────────────
+
+/** Override info attached to a card when a toggle (not the base decision) sealed it. */
+export interface CardOverride {
+	categories: PrivacyCategoryId[];
+	reason: string;
+}
 
 export function loadCards(): ContextCard[] {
 	const connected = new Set(connectedSources());
+	const active = activeCategoryIds();
+
 	return (cardsFixture as ContextCard[])
 		.filter((c) => connected.has(c.source))
 		.map((c): ContextCard => {
-			if (c.tier === 'private' && cryptoReady.value) {
-				const secret = decryptedSecrets[c.id];
-				if (!secret) {
-					// Locked: return card shell with no content
-					return { ...c, summary: null, body: null, entities: [] };
-				}
-				// Revealed: content comes FROM the actual decrypt output (not fixture)
-				return { ...c, summary: secret.summary, body: secret.body, entities: secret.entities };
+			// Run the item through the Gateway: base decision + active policy overrides.
+			const eff = effectiveTier(c.tier, cardText(c), active);
+
+			if (eff.tier === 'shared') {
+				// Not private (base shared, no active toggle matched) — serve as-is.
+				return { ...c, tier: 'shared' };
 			}
-			return c;
+
+			// PRIVATE — either the base decision or a toggle-forced override.
+			const meta = eff.forced
+				? { ...(c.meta ?? {}), _override: { categories: eff.categories, reason: eff.reason } }
+				: c.meta;
+			const priv = { ...c, tier: 'private' as const, meta };
+
+			if (!cryptoReady.value) {
+				// Pre-crypto: still show PRIVATE, but no content until sealed/decrypted.
+				return { ...priv, summary: null, body: null, entities: [] };
+			}
+
+			const secret = decryptedSecrets[c.id];
+			if (!secret) {
+				// Locked: shell only. getEncryptedBlob() supplies the ciphertext for display.
+				return { ...priv, summary: null, body: null, entities: [] };
+			}
+			// Revealed: content comes FROM the actual decrypt output (not the fixture).
+			return { ...priv, summary: secret.summary, body: secret.body, entities: secret.entities };
 		});
 }
 
