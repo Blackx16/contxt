@@ -141,6 +141,52 @@ def test_cloud_call_emits_capturable_log_line(caplog):
         os.environ.pop("CONTXT_MOCK_GEMMA", None)
 
 
+# ── 5. distill_draft (draft_reply upstream) — privacy boundary ───────────────
+
+def test_distill_draft_returns_string(monkeypatch):
+    monkeypatch.setattr(
+        distill, "_call_cloud_gemma",
+        lambda system, user, **kw: "Thanks — I'll follow up on the standup shortly.",
+    )
+    result = distill.distill_draft(
+        "When's our next standup?",
+        '[{"title": "Standup with Theerth", "summary": "Daily 10am sync"}]',
+    )
+    assert isinstance(result, str) and len(result) > 0
+
+
+def test_distill_draft_does_not_include_private_content(monkeypatch):
+    """The cloud call must only receive the shared_context string we pass — never raw private text."""
+    received_prompt = {}
+
+    def _capture(system, user, **kw):
+        received_prompt["system"] = system
+        received_prompt["user"] = user
+        return "Thanks for your note."
+
+    monkeypatch.setattr(distill, "_call_cloud_gemma", _capture)
+
+    shared_ctx = '[{"title": "Contxt architecture", "summary": "Two-tier context layer"}]'
+    distill.distill_draft("Tell me about the standup", shared_ctx)
+
+    # Private text that was never passed must not appear in the cloud prompt.
+    assert "ICICI" not in received_prompt["user"]
+    assert "₹14,200" not in received_prompt["user"]
+    assert "blood test" not in received_prompt["user"]
+    # Shared context IS present.
+    assert "Contxt architecture" in received_prompt["user"]
+
+
+def test_distill_draft_respects_max_words_in_system_prompt(monkeypatch):
+    received = {}
+    monkeypatch.setattr(
+        distill, "_call_cloud_gemma",
+        lambda system, user, **kw: received.update({"system": system}) or "ok",
+    )
+    distill.distill_draft("hello", "[]", max_words=42)
+    assert "42" in received["system"]
+
+
 # ── standalone runner (no pytest required) ────────────────────────────────────
 
 if __name__ == "__main__":

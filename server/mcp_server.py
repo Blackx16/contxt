@@ -254,17 +254,25 @@ if app:
 
     @app.tool()
     def draft_reply(email: str, max_words: int = 150) -> dict:
-        """Draft a context-aware reply to an email.
+        """Draft a context-aware reply to an email or message thread.
 
-        Uses SHARED context cards only — PRIVATE cards are intentionally
-        excluded from cloud Gemma calls to protect user privacy.
+        Uses SHARED context cards only — PRIVATE cards are retrieved locally
+        for the `private_cards_excluded` audit count but their content is
+        NEVER forwarded to the cloud drafting model. This is the privacy
+        guarantee: the drafting AI sees only what the user consented to share.
+
+        Set CONTXT_MOCK_GEMMA=1 to draft offline without a cloud API key.
         """
         if not _SCHEMA_OK:
             return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
+        if not _DISTILL_OK:
+            return {"error": "gateway.distill not available — run: pip install -r server/requirements.txt"}
 
         all_cards = _search_cards(email, limit=6)
         shared = [c for c in all_cards if c.tier == Tier.SHARED]
+        private_excluded = len(all_cards) - len(shared)
 
+        # Only SHARED fields go into the prompt — private content is never serialized here.
         cards_ctx = json.dumps(
             [
                 {
@@ -278,18 +286,14 @@ if app:
             indent=2,
         )
 
-        if _DISTILL_OK and os.getenv("FIREWORKS_API_KEY"):
-            draft = _cloud_draft(email, cards_ctx, max_words=max_words)
-        else:
-            draft = (
-                "[cloud Gemma not wired — set FIREWORKS_API_KEY in .env]\n\n"
-                f"Relevant context ({len(shared)} SHARED card(s)):\n{cards_ctx}"
-            )
+        # distill_draft handles mock/offline gracefully when no API key is set.
+        # CONTXT_MOCK_GEMMA=1 forces offline; default auto-detects based on key presence.
+        draft = _cloud_draft(email, cards_ctx, max_words=max_words)
 
         return {
             "draft": draft,
             "used_card_ids": [c.id for c in shared],
-            "private_cards_excluded": len(all_cards) - len(shared),
+            "private_cards_excluded": private_excluded,
         }
 
 

@@ -104,6 +104,7 @@ class DraftReplyResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     draft: str
     used_card_ids: list[str] = Field(default_factory=list)
+    private_cards_excluded: int = Field(default=0, ge=0)
 
 
 # ---- fixture helpers ----
