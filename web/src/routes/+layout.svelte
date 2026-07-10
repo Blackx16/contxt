@@ -19,9 +19,10 @@
 <header class="site-header">
 	<div class="container bar">
 		<a class="brand" href="/">
-			<span class="brand-mark">◆</span>
-			<span class="brand-name">Contxt</span>
-			<span class="brand-tag">privacy-first context layer</span>
+			<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+				<path d="M4 4 H28 V28 H4 Z M28 4 L4 28" fill="none" stroke="currentColor" stroke-width="2.4" />
+			</svg>
+			<span class="wordmark">CONTXT</span>
 		</a>
 		<nav>
 			{#each nav as item (item.href)}
@@ -39,17 +40,17 @@
 	{@render children()}
 </main>
 
-<footer class="container site-footer">
-	<span
-		>Contxt · AMD Developer Hackathon ACT II · two-tier context, your private data stays yours</span
-	>
+<footer class="site-footer">
+	<div class="container foot-inner">
+		<span class="wordmark small">CONTXT</span>
+		<span class="mono foot-note">AMD Developer Hackathon ACT II — your private data stays yours</span>
+	</div>
 </footer>
 
 <style>
 	.site-header {
-		border-bottom: 1px solid var(--border);
-		background: rgba(10, 11, 15, 0.7);
-		backdrop-filter: blur(10px);
+		border-bottom: 1px solid var(--rule);
+		background: var(--lacquer);
 		position: sticky;
 		top: 0;
 		z-index: 10;
@@ -58,63 +59,69 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		height: 62px;
+		height: 66px;
 	}
 	.brand {
 		display: flex;
-		align-items: baseline;
-		gap: 9px;
-		color: var(--text);
-	}
-	.brand:hover {
-		text-decoration: none;
+		align-items: center;
+		gap: 11px;
+		color: var(--champagne);
 	}
 	.brand-mark {
-		color: var(--brand);
-		font-size: 1.1rem;
+		width: 20px;
+		height: 20px;
+		color: var(--gold);
 	}
-	.brand-name {
-		font-weight: 700;
-		font-size: 1.12rem;
-		letter-spacing: -0.02em;
-	}
-	.brand-tag {
-		color: var(--text-faint);
-		font-size: 0.8rem;
-	}
-	@media (max-width: 620px) {
-		.brand-tag {
-			display: none;
-		}
+	.wordmark {
+		font-family: var(--font-display);
+		font-weight: 400;
+		font-size: 1.3rem;
+		letter-spacing: 0.15em;
+		color: var(--champagne);
 	}
 	nav {
 		display: flex;
-		gap: 6px;
+		gap: 4px;
 	}
 	.nav-link {
-		padding: 7px 14px;
-		border-radius: 8px;
+		padding: 8px 14px;
+		border-radius: var(--r-xs);
 		color: var(--text-muted);
 		font-size: 0.92rem;
-		font-weight: 550;
+		font-weight: 500;
 	}
 	.nav-link:hover {
-		background: var(--surface);
-		color: var(--text);
-		text-decoration: none;
+		color: var(--gold);
 	}
 	.nav-link.active {
-		background: var(--brand-soft);
-		color: var(--text);
+		color: var(--champagne);
+		box-shadow: inset 0 -2px 0 var(--gold);
 	}
 	main {
-		padding: 40px 24px 64px;
-		min-height: calc(100vh - 62px - 70px);
+		padding: 56px 32px 80px;
+		min-height: calc(100vh - 66px - 88px);
 	}
 	.site-footer {
-		border-top: 1px solid var(--border);
-		padding: 22px 24px;
+		border-top: 1px solid var(--rule);
+		background: var(--lacquer-deep);
+	}
+	.foot-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding-top: 26px;
+		padding-bottom: 26px;
+		flex-wrap: wrap;
+	}
+	.wordmark.small {
+		font-size: 0.95rem;
+		letter-spacing: 0.2em;
+		color: var(--text-muted);
+	}
+	.foot-note {
 		color: var(--text-faint);
-		font-size: 0.82rem;
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
 	}
 </style>

@@ -6,7 +6,7 @@
 </script>
 
 <section class="head">
-	<span class="step">Step 1 of 2 · Connect sources</span>
+	<span class="step eyebrow">Step 1 of 2 · Connect sources</span>
 	<h1>Bring your context in.</h1>
 	<p class="lede">
 		Connect a source and Contxt ingests it, then the Crown-Jewels Gateway sorts each item into
@@ -26,7 +26,7 @@
 			</div>
 			<div class="source-action">
 				{#if status === 'connected'}
-					<span class="done">✓ Connected</span>
+					<span class="done mono">Connected</span>
 					<button class="btn ghost" onclick={() => disconnectSource(s.id)}>Disconnect</button>
 				{:else if status === 'connecting'}
 					<button class="btn" disabled>
@@ -41,7 +41,7 @@
 </div>
 
 <div class="foot">
-	<span class="count">{count} of {SOURCES.length} connected</span>
+	<span class="count mono">{count} of {SOURCES.length} connected</span>
 	<button class="btn btn-primary" disabled={count === 0} onclick={() => goto('/viewer')}>
 		Continue to your context →
 	</button>
@@ -50,47 +50,46 @@
 <style>
 	.head {
 		max-width: 640px;
-		margin-bottom: 28px;
+		margin-bottom: 36px;
 	}
 	.step {
-		color: var(--brand);
-		font-size: 0.82rem;
-		font-weight: 600;
-	}
-	h1 {
-		font-size: 2.1rem;
-		margin: 10px 0 12px;
+		display: block;
+		margin-bottom: 16px;
 	}
 	.lede {
 		color: var(--text-muted);
-		margin: 0;
+		margin: 20px 0 0;
+		font-size: 1.02rem;
+		line-height: 1.7;
+		max-width: 64ch;
 	}
 	.sources {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 10px;
 	}
 	.source {
 		display: flex;
 		align-items: center;
 		gap: 16px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 16px 18px;
-		transition: border-color 0.15s ease;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-lg);
+		padding: 18px 20px;
+		transition: border-color 0.15s var(--ease);
 	}
 	.source.connected {
-		border-color: var(--shared-border);
+		border-color: var(--rule-strong);
 	}
 	.source-icon {
-		font-size: 1.6rem;
-		width: 44px;
-		height: 44px;
+		font-size: 1.4rem;
+		width: 42px;
+		height: 42px;
 		display: grid;
 		place-items: center;
-		background: var(--surface-2);
-		border-radius: 11px;
+		background: var(--graphite);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-md);
 		flex-shrink: 0;
 	}
 	.source-body {
@@ -98,8 +97,9 @@
 		min-width: 0;
 	}
 	.source-title {
-		font-weight: 600;
-		font-size: 1.02rem;
+		font-weight: 500;
+		font-size: 1.05rem;
+		color: var(--champagne);
 	}
 	.source-blurb {
 		color: var(--text-muted);
@@ -112,34 +112,43 @@
 		flex-shrink: 0;
 	}
 	.done {
-		color: var(--shared);
-		font-weight: 600;
-		font-size: 0.9rem;
+		color: var(--gold);
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 	}
 	.btn.ghost {
 		background: transparent;
-		border-color: var(--border);
+		border-color: var(--rule);
 		color: var(--text-muted);
-		padding: 7px 12px;
+		min-height: 38px;
+		padding: 0 14px;
 		font-size: 0.85rem;
+	}
+	.btn.ghost:hover {
+		color: var(--vermilion);
+		border-color: var(--vermilion);
 	}
 	.foot {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-top: 28px;
-		padding-top: 20px;
-		border-top: 1px solid var(--border);
+		gap: 16px;
+		margin-top: 32px;
+		padding-top: 24px;
+		border-top: 1px solid var(--rule);
+		flex-wrap: wrap;
 	}
 	.count {
 		color: var(--text-muted);
-		font-size: 0.9rem;
+		font-size: 0.78rem;
+		letter-spacing: 0.06em;
 	}
 	.spinner {
 		width: 13px;
 		height: 13px;
-		border: 2px solid var(--text-faint);
-		border-top-color: var(--text);
+		border: 2px solid var(--graphite-2);
+		border-top-color: var(--gold);
 		border-radius: 50%;
 		display: inline-block;
 		animation: spin 0.7s linear infinite;

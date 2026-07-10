@@ -17,22 +17,23 @@
 	<div class="cta">
 		{#if connected}
 			<a class="btn btn-primary" href="/viewer">View your context →</a>
-			<a class="btn" href="/onboarding">Manage sources</a>
+			<a class="btn btn-secondary" href="/onboarding">Manage sources</a>
 		{:else}
 			<a class="btn btn-primary" href="/onboarding">Connect a source →</a>
-			<a class="btn" href="/viewer">See the viewer</a>
+			<a class="btn btn-secondary" href="/viewer">See the viewer</a>
 		{/if}
 	</div>
 </section>
 
 <section class="tiers">
-	<div class="tier tier-shared">
-		<span class="tag tag-shared">↗ Shared</span>
+	<div class="tier">
+		<span class="tag tag-shared">Shared</span>
 		<h3>Cloud-readable</h3>
 		<p>Distilled by cloud Gemma, lightly encrypted. Any AI can use it directly through MCP.</p>
 	</div>
-	<div class="tier tier-private">
-		<span class="tag tag-private">🔒 Private</span>
+	<div class="seam" aria-hidden="true"></div>
+	<div class="tier">
+		<span class="tag tag-private">Private</span>
 		<h3>Crown jewels</h3>
 		<p>
 			Classified on-device, E2E-encrypted. The cloud is a blind relay — it only ever holds
@@ -43,77 +44,63 @@
 
 <style>
 	.hero {
-		padding: 28px 0 44px;
-		max-width: 720px;
+		padding: 24px 0 56px;
+		max-width: 760px;
 	}
 	.eyebrow {
-		display: inline-block;
-		color: var(--brand);
-		font-size: 0.82rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
-		margin-bottom: 18px;
-		padding: 5px 12px;
-		border: 1px solid var(--border-strong);
-		border-radius: 999px;
-		background: var(--brand-soft);
-	}
-	h1 {
-		font-size: 3rem;
-		line-height: 1.05;
-		margin-bottom: 20px;
+		display: block;
+		margin-bottom: 24px;
 	}
 	.lede {
-		font-size: 1.1rem;
+		font-size: 1.12rem;
+		line-height: 1.75;
 		color: var(--text-muted);
-		max-width: 640px;
+		max-width: 68ch;
+		margin: 24px 0 0;
 	}
 	.kw-private {
-		color: var(--private);
-		font-weight: 600;
+		color: var(--gold);
 	}
 	.kw-shared {
-		color: var(--shared);
-		font-weight: 600;
+		color: var(--patina-text);
 	}
 	.cta {
 		display: flex;
 		gap: 12px;
-		margin-top: 28px;
+		margin-top: 36px;
 		flex-wrap: wrap;
 	}
+
+	/* Two-tier block on a single dark plinth, split by a hairline seam — not two nested cards */
 	.tiers {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
-		margin-top: 8px;
-	}
-	@media (max-width: 620px) {
-		.tiers {
-			grid-template-columns: 1fr;
-		}
-		h1 {
-			font-size: 2.2rem;
-		}
+		grid-template-columns: 1fr 1px 1fr;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-lg);
+		overflow: hidden;
 	}
 	.tier {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 20px;
+		padding: 28px;
 	}
 	.tier h3 {
-		margin: 12px 0 6px;
+		margin: 14px 0 8px;
 	}
 	.tier p {
 		margin: 0;
 		color: var(--text-muted);
-		font-size: 0.9rem;
+		font-size: 0.95rem;
+		max-width: 42ch;
 	}
-	.tier-private {
-		border-left: 3px solid var(--private);
+	.seam {
+		background: var(--rule);
 	}
-	.tier-shared {
-		border-left: 3px solid var(--shared);
+	@media (max-width: 640px) {
+		.tiers {
+			grid-template-columns: 1fr;
+		}
+		.seam {
+			height: 1px;
+		}
 	}
 </style>

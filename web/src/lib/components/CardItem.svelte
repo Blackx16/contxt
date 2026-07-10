@@ -3,29 +3,20 @@
 
 	let { card }: { card: ContextCard } = $props();
 
-	const SOURCE_ICON: Record<string, string> = {
-		gmail: '✉️',
-		calendar: '📅',
-		notion: '📓'
-	};
-
 	const isPrivate = $derived(card.tier === 'private');
 	const isEncrypted = $derived(!!card.encryption);
 	const pct = $derived(Math.round(card.sensitivity_score * 100));
 
 	function shortCipher(c: string): string {
-		return c.length > 56 ? c.slice(0, 56) + '…' : c;
+		return c.length > 52 ? c.slice(0, 52) + '…' : c;
 	}
 </script>
 
-<article class="card" class:private={isPrivate}>
+<article class="card">
 	<header class="card-head">
-		<div class="src">
-			<span class="src-icon">{SOURCE_ICON[card.source] ?? '•'}</span>
-			<span class="src-name">{card.source}</span>
-		</div>
+		<span class="src mono">{card.source}</span>
 		<span class="tag {isPrivate ? 'tag-private' : 'tag-shared'}">
-			{isPrivate ? '🔒 Private' : '↗ Shared'}
+			{isPrivate ? 'Private' : 'Shared'}
 		</span>
 	</header>
 
@@ -33,10 +24,7 @@
 
 	{#if isEncrypted}
 		<div class="locked">
-			<div class="locked-row">
-				<span class="lock">🔒</span>
-				<span>Encrypted on-device · cloud stores ciphertext only</span>
-			</div>
+			<div class="locked-row mono">Encrypted on-device · cloud stores ciphertext only</div>
 			<code class="cipher mono">{shortCipher(card.encryption!.ciphertext)}</code>
 			<div class="crypto-meta mono">
 				{card.encryption!.alg} · key {card.encryption!.key_ref}
@@ -52,19 +40,21 @@
 		{#if card.entities.length}
 			<div class="entities">
 				{#each card.entities as e (e.type + e.value)}
-					<span class="entity"><span class="etype">{e.type}</span>{e.value}</span>
+					<span class="entity"><span class="etype mono">{e.type}</span>{e.value}</span>
 				{/each}
 			</div>
 		{/if}
 		{#if isPrivate}
-			<div class="ondevice mono">● decrypted locally — never leaves this device</div>
+			<div class="ondevice mono">Decrypted locally — never leaves this device</div>
 		{/if}
 	{/if}
 
 	<footer class="card-foot">
 		<div class="sens" title="Sensitivity score">
-			<span class="sens-label">sensitivity</span>
-			<span class="meter"><span class="fill" class:hot={pct >= 70} style="width:{pct}%"></span></span>
+			<span class="sens-label mono">sensitivity</span>
+			<span class="meter"
+				><span class="fill" class:hot={isPrivate} style="width:{pct}%"></span></span
+			>
 			<span class="sens-val mono">{pct}%</span>
 		</div>
 		<time class="ts mono">{new Date(card.created_at).toLocaleDateString()}</time>
@@ -73,21 +63,20 @@
 
 <style>
 	.card {
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 18px 18px 14px;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-lg);
+		padding: 22px;
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
-		transition: border-color 0.15s ease, transform 0.1s ease;
+		gap: 12px;
+		transition:
+			border-color 0.15s var(--ease),
+			transform 0.12s var(--ease);
 	}
 	.card:hover {
-		border-color: var(--border-strong);
+		border-color: var(--rule-strong);
 		transform: translateY(-2px);
-	}
-	.card.private {
-		border-left: 3px solid var(--private);
 	}
 	.card-head {
 		display: flex;
@@ -95,31 +84,26 @@
 		justify-content: space-between;
 	}
 	.src {
-		display: flex;
-		align-items: center;
-		gap: 7px;
-		color: var(--text-muted);
-		font-size: 0.82rem;
-	}
-	.src-icon {
-		font-size: 0.95rem;
-	}
-	.src-name {
-		text-transform: capitalize;
+		color: var(--text-faint);
+		font-size: 0.68rem;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
 	}
 	.card-title {
-		font-size: 1.02rem;
+		font-size: 1.08rem;
 		line-height: 1.3;
 	}
 	.summary {
 		margin: 0;
 		color: var(--text);
-		font-size: 0.92rem;
+		font-size: 0.94rem;
+		line-height: 1.6;
 	}
 	.body {
 		margin: 0;
 		color: var(--text-muted);
 		font-size: 0.86rem;
+		line-height: 1.6;
 	}
 	.entities {
 		display: flex;
@@ -130,98 +114,95 @@
 	.entity {
 		display: inline-flex;
 		align-items: center;
-		gap: 5px;
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		border-radius: 7px;
-		padding: 2px 8px;
+		gap: 6px;
+		background: var(--graphite);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-sm);
+		padding: 3px 8px;
 		font-size: 0.78rem;
 		color: var(--text);
 	}
 	.etype {
 		color: var(--text-faint);
-		font-size: 0.66rem;
+		font-size: 0.6rem;
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.08em;
 	}
 	.ondevice {
-		color: var(--private);
-		font-size: 0.75rem;
-		opacity: 0.85;
+		color: var(--gold-rich);
+		font-size: 0.72rem;
+		letter-spacing: 0.02em;
 	}
+	/* Inset technical panel — a distinct material surface, not a nested card */
 	.locked {
-		background: var(--private-soft);
-		border: 1px dashed var(--private-border);
-		border-radius: var(--radius-sm);
-		padding: 12px;
+		background: var(--lacquer-deep);
+		border: 1px solid var(--rule-strong);
+		border-radius: var(--r-sm);
+		padding: 14px;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 9px;
 	}
 	.locked-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		color: var(--private);
-		font-size: 0.82rem;
-		font-weight: 550;
-	}
-	.lock {
-		font-size: 0.95rem;
+		color: var(--gold);
+		font-size: 0.72rem;
+		letter-spacing: 0.02em;
 	}
 	.cipher {
 		display: block;
-		background: rgba(0, 0, 0, 0.35);
-		border-radius: 6px;
-		padding: 8px 10px;
-		font-size: 0.74rem;
 		color: var(--text-muted);
+		font-size: 0.74rem;
+		letter-spacing: 0;
 		word-break: break-all;
+		opacity: 0.85;
 	}
 	.crypto-meta {
-		font-size: 0.68rem;
+		font-size: 0.66rem;
 		color: var(--text-faint);
+		letter-spacing: 0;
 	}
 	.card-foot {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-top: 4px;
-		padding-top: 10px;
-		border-top: 1px solid var(--border);
+		margin-top: 2px;
+		padding-top: 12px;
+		border-top: 1px solid var(--rule);
 	}
 	.sens {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 9px;
 	}
 	.sens-label {
-		font-size: 0.7rem;
+		font-size: 0.62rem;
 		color: var(--text-faint);
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.1em;
 	}
 	.meter {
-		width: 70px;
-		height: 5px;
-		border-radius: 3px;
-		background: var(--surface-2);
+		width: 64px;
+		height: 4px;
+		border-radius: var(--r-pill);
+		background: var(--graphite-2);
 		overflow: hidden;
 	}
 	.fill {
 		display: block;
 		height: 100%;
-		background: var(--shared);
+		background: var(--patina);
 	}
 	.fill.hot {
-		background: var(--private);
+		background: var(--gold);
 	}
 	.sens-val {
-		font-size: 0.72rem;
+		font-size: 0.7rem;
 		color: var(--text-muted);
+		letter-spacing: 0;
 	}
 	.ts {
-		font-size: 0.72rem;
+		font-size: 0.7rem;
 		color: var(--text-faint);
+		letter-spacing: 0;
 	}
 </style>

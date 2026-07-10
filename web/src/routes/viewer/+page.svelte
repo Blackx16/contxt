@@ -14,16 +14,16 @@
 
 	const filters: { id: Filter; label: string }[] = [
 		{ id: 'all', label: 'All' },
-		{ id: 'shared', label: '↗ Shared' },
-		{ id: 'private', label: '🔒 Private' }
+		{ id: 'shared', label: 'Shared' },
+		{ id: 'private', label: 'Private' }
 	];
 </script>
 
 <section class="head">
 	<div>
 		<h1>Your context</h1>
-		<p class="sub">
-			{cards.length} card{cards.length === 1 ? '' : 's'} from {connected.length} source{connected.length ===
+		<p class="sub mono">
+			{cards.length} card{cards.length === 1 ? '' : 's'} · {connected.length} source{connected.length ===
 			1
 				? ''
 				: 's'} ·
@@ -44,7 +44,14 @@
 
 {#if cards.length === 0}
 	<div class="empty">
-		<div class="empty-icon">◆</div>
+		<svg class="empty-icon" viewBox="0 0 32 32" aria-hidden="true">
+			<path
+				d="M4 4 H28 V28 H4 Z M28 4 L4 28"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.2"
+			/>
+		</svg>
 		<h2>No context yet</h2>
 		<p>Connect a source and Contxt will ingest it, then show your distilled context cards here.</p>
 		<a class="btn btn-primary" href="/onboarding">Connect a source →</a>
@@ -66,78 +73,83 @@
 		align-items: flex-end;
 		justify-content: space-between;
 		gap: 16px;
-		margin-bottom: 24px;
+		margin-bottom: 28px;
 		flex-wrap: wrap;
-	}
-	h1 {
-		font-size: 2rem;
 	}
 	.sub {
 		color: var(--text-muted);
-		margin: 6px 0 0;
-		font-size: 0.92rem;
+		margin: 10px 0 0;
+		font-size: 0.76rem;
+		letter-spacing: 0.06em;
 	}
 	.c-shared {
-		color: var(--shared);
+		color: var(--patina-text);
 	}
 	.c-private {
-		color: var(--private);
+		color: var(--gold);
 	}
 	.filters {
 		display: flex;
-		gap: 6px;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		padding: 4px;
+		gap: 2px;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-sm);
+		padding: 3px;
 	}
 	.chip {
 		border: none;
 		background: transparent;
 		color: var(--text-muted);
-		font: inherit;
-		font-size: 0.86rem;
-		font-weight: 550;
-		padding: 6px 14px;
-		border-radius: 999px;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		padding: 7px 15px;
+		border-radius: var(--r-xs);
 		cursor: pointer;
+		transition:
+			background 0.15s var(--ease),
+			color 0.15s var(--ease);
 	}
 	.chip:hover {
-		color: var(--text);
+		color: var(--champagne);
 	}
 	.chip.active {
-		background: var(--surface-2);
-		color: var(--text);
+		background: var(--graphite-2);
+		color: var(--gold);
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-		gap: 16px;
+		grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+		gap: 14px;
+		align-items: start;
 	}
 	.none {
 		color: var(--text-faint);
 		text-align: center;
-		padding: 40px;
+		padding: 48px;
 	}
 	.empty {
 		text-align: center;
-		padding: 70px 20px;
-		background: var(--surface);
-		border: 1px dashed var(--border-strong);
-		border-radius: var(--radius);
+		padding: 80px 20px;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-lg);
 	}
 	.empty-icon {
-		font-size: 2rem;
-		color: var(--brand);
-		margin-bottom: 8px;
+		width: 34px;
+		height: 34px;
+		margin: 0 auto 14px;
+		color: var(--gold);
 	}
 	.empty h2 {
-		font-size: 1.3rem;
-		margin-bottom: 8px;
+		font-size: 1.6rem;
+		margin-bottom: 10px;
 	}
 	.empty p {
 		color: var(--text-muted);
-		max-width: 420px;
-		margin: 0 auto 22px;
+		max-width: 46ch;
+		margin: 0 auto 24px;
+		line-height: 1.7;
 	}
 </style>
