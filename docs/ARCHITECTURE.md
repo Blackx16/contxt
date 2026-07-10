@@ -74,6 +74,31 @@ flowchart LR
 - `get_context(query)` — SHARED context cards.
 - `draft_reply(email)` — one agentic action for the demo.
 
+## Serving to the browser — the inject-into-any-AI bridge (CHA-26)
+
+MCP clients (Claude Desktop) reach the tools over **stdio**. A browser extension
+cannot speak stdio, so `server/http_bridge.py` fronts the *same* `get_context` /
+`draft_reply` functions over local HTTP. One source of truth, two transports.
+
+```mermaid
+flowchart LR
+    DB[(Two-tier store<br/>SHARED plaintext · PRIVATE ciphertext)] --- MCP[MCP server<br/>get_context / draft_reply]
+    MCP -. same tool logic .- BR[HTTP bridge<br/>127.0.0.1:8787]
+    MCP -->|stdio| CD[Claude Desktop]
+    BR -->|HTTP · SHARED only| EXT[Browser extension<br/>content script]
+    EXT -->|inject SHARED context| AI[Claude / ChatGPT / Gemini web]
+```
+
+- The bridge's `/get_context` serves **SHARED cards only** plus a `private_total`
+  count. PRIVATE plaintext is never serialized onto the wire — the crown jewels
+  cannot leak into a cloud chat, *by construction* (not by promise).
+- The content script (`extension/content.js`) detects Claude / ChatGPT / Gemini,
+  auto-injects the SHARED cards into the composer, and shows a badge:
+  *N shared → this AI · P private kept on-device*. If the bridge is down it falls
+  back to a bundled fixture, so the demo always injects something.
+- Headless proof (boots the bridge, asserts zero private leakage):
+  `python3 server/verify_cha26.py`.
+
 ## Roadmap (out of hackathon scope)
 
 Full local-everything · Sesame key ratcheting · Tauri desktop app · mobile on-device Gemma 3n · fine-tuned 270M classifier.

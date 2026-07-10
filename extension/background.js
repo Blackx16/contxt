@@ -18,6 +18,18 @@
 
 const OFFSCREEN_URL = 'offscreen.html';
 
+// The local HTTP bridge that fronts the MCP server's get_context / draft_reply
+// (browsers can't speak MCP stdio). Overridable via chrome.storage.local.
+const DEFAULT_BRIDGE = 'http://127.0.0.1:8787';
+
+async function getBridgeUrl() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get({ bridgeUrl: DEFAULT_BRIDGE }, (s) =>
+      resolve(s.bridgeUrl || DEFAULT_BRIDGE),
+    );
+  });
+}
+
 // Guard against the MV3 race where two rapid classify messages both pass the
 // hasDocument() check and both call createDocument → "Only a single offscreen
 // document may be created". Concurrent callers await the same creation promise.
@@ -78,6 +90,42 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       )
       .then(sendResponse)
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true; // async
+  }
+
+  // ── get:context ─────────────────────────────────────────────────────────────
+  // The content script (on claude.ai / chatgpt.com / gemini.google.com) asks for
+  // context to inject. We fetch the local bridge (get_context over HTTP). The
+  // content script page is https and the bridge is http://127.0.0.1, so the fetch
+  // MUST happen here in the extension origin, not in the page (mixed-content).
+  // If the bridge is down, fall back to the bundled fixture so the demo always
+  // injects something. Payload is SHARED-only + private counts either way.
+  if (msg?.type === 'get:context') {
+    const query = (msg.query || 'what am I working on').toString();
+    getBridgeUrl()
+      .then((base) => {
+        const url =
+          base.replace(/\/$/, '') +
+          '/get_context?query=' +
+          encodeURIComponent(query) +
+          '&limit=6';
+        return fetch(url).then((r) => {
+          if (!r.ok) throw new Error('bridge HTTP ' + r.status);
+          return r.json();
+        });
+      })
+      .then((data) => sendResponse({ ok: true, source: 'bridge', ...data }))
+      .catch(async (err) => {
+        // Offline fallback — bundled fixture (SHARED-only, mirrors the bridge).
+        try {
+          const fx = await fetch(
+            chrome.runtime.getURL('fixtures/get_context_response.json'),
+          ).then((r) => r.json());
+          sendResponse({ ok: true, source: 'fixture', note: String(err), ...fx });
+        } catch (e2) {
+          sendResponse({ ok: false, error: 'bridge + fixture both failed: ' + err });
+        }
+      });
     return true; // async
   }
 

@@ -228,6 +228,87 @@ def _card_to_dict(card: ContextCard, *, strip_encryption: bool = True) -> dict:
     return d
 
 
+# ── Tool cores (importable — shared by the MCP tools AND the HTTP bridge) ──────
+#
+# The MCP server speaks stdio (Claude Desktop). Browsers can't speak stdio, so
+# the browser extension talks to server/http_bridge.py instead — which calls the
+# SAME functions below. One source of truth, two transports.
+
+
+def context_payload(query: str, limit: int = 8, *, include_private: bool = True) -> dict:
+    """Return context cards relevant to `query`.
+
+    include_private=True  → serve PRIVATE cards too. Safe for the MCP tool
+                            because that path is on-device / local-model.
+    include_private=False → SHARED cards only, plus a `private_withheld` count.
+                            The HTTP bridge uses this: PRIVATE plaintext never
+                            crosses into a cloud-facing surface (the browser
+                            injecting context into Claude / ChatGPT / Gemini).
+    """
+    if not _SCHEMA_OK:
+        return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
+
+    cards = _search_cards(query, min(max(limit, 1), 50))
+
+    if include_private:
+        result = [_card_to_dict(c) for c in cards]
+        return {"cards": result, "query": query, "total": len(result)}
+
+    shared = [c for c in cards if c.tier == Tier.SHARED]
+    withheld = len(cards) - len(shared)
+    payload = {
+        "cards": [_card_to_dict(c) for c in shared],
+        "query": query,
+        "total": len(shared),
+        "private_withheld": withheld,  # PRIVATE cards that matched THIS query
+    }
+    # Always-on trust signal: how many crown jewels live on-device in total,
+    # independent of whether they matched the query. The badge shows this.
+    try:
+        payload["private_total"] = _get_store().counts()["private"]
+    except Exception:
+        pass
+    return payload
+
+
+def draft_reply_payload(email: str, max_words: int = 150) -> dict:
+    """Draft a context-aware reply using SHARED cards only.
+
+    PRIVATE cards are retrieved locally for the `private_cards_excluded` audit
+    count but their content is NEVER forwarded to the cloud drafting model.
+    """
+    if not _SCHEMA_OK:
+        return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
+    if not _DISTILL_OK:
+        return {"error": "gateway.distill not available — run: pip install -r server/requirements.txt"}
+
+    all_cards = _search_cards(email, limit=6)
+    shared = [c for c in all_cards if c.tier == Tier.SHARED]
+    private_excluded = len(all_cards) - len(shared)
+
+    # Only SHARED fields go into the prompt — private content is never serialized here.
+    cards_ctx = json.dumps(
+        [
+            {
+                "title": c.title,
+                "summary": c.summary,
+                "body": c.body,
+                "entities": [e.model_dump() for e in c.entities],
+            }
+            for c in shared
+        ],
+        indent=2,
+    )
+
+    draft = _cloud_draft(email, cards_ctx, max_words=max_words)
+
+    return {
+        "draft": draft,
+        "used_card_ids": [c.id for c in shared],
+        "private_cards_excluded": private_excluded,
+    }
+
+
 # ── MCP tools ─────────────────────────────────────────────────────────────────
 
 if app:
@@ -240,17 +321,7 @@ if app:
         PRIVATE cards are served only because this MCP server is local — they
         are decrypted in-process and never forwarded to a cloud model.
         """
-        if not _SCHEMA_OK:
-            return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
-
-        cards = _search_cards(query, min(max(limit, 1), 50))
-        result = [_card_to_dict(c) for c in cards]
-
-        return {
-            "cards": result,
-            "query": query,
-            "total": len(result),
-        }
+        return context_payload(query, limit, include_private=True)
 
     @app.tool()
     def draft_reply(email: str, max_words: int = 150) -> dict:
@@ -263,38 +334,7 @@ if app:
 
         Set CONTXT_MOCK_GEMMA=1 to draft offline without a cloud API key.
         """
-        if not _SCHEMA_OK:
-            return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
-        if not _DISTILL_OK:
-            return {"error": "gateway.distill not available — run: pip install -r server/requirements.txt"}
-
-        all_cards = _search_cards(email, limit=6)
-        shared = [c for c in all_cards if c.tier == Tier.SHARED]
-        private_excluded = len(all_cards) - len(shared)
-
-        # Only SHARED fields go into the prompt — private content is never serialized here.
-        cards_ctx = json.dumps(
-            [
-                {
-                    "title": c.title,
-                    "summary": c.summary,
-                    "body": c.body,
-                    "entities": [e.model_dump() for e in c.entities],
-                }
-                for c in shared
-            ],
-            indent=2,
-        )
-
-        # distill_draft handles mock/offline gracefully when no API key is set.
-        # CONTXT_MOCK_GEMMA=1 forces offline; default auto-detects based on key presence.
-        draft = _cloud_draft(email, cards_ctx, max_words=max_words)
-
-        return {
-            "draft": draft,
-            "used_card_ids": [c.id for c in shared],
-            "private_cards_excluded": private_excluded,
-        }
+        return draft_reply_payload(email, max_words)
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
