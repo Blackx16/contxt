@@ -35,6 +35,30 @@ Runs **on-device** — trust boundary. Nothing leaves before this decision.
 - AES-256-GCM + ECDH (X25519) via Web Crypto API.
 - Multi-device: QR code key transfer. Cloud stores ciphertext only.
 
+## Multi-device (CHA-22)
+
+The same encrypted private card decrypts on a second device after a QR key transfer —
+proving portability without weakening the zero-knowledge guarantee.
+
+```mermaid
+flowchart LR
+    A[Device A<br/>holds key] -->|encrypt| CT[ciphertext]
+    CT --> R[(Blind relay · cloud<br/>id · ciphertext · iv)]
+    A -. key envelope via QR .-> B[Device B]
+    R -->|pull ciphertext| B
+    B -->|decrypt locally| P[same plaintext]
+```
+
+- **Key path (out-of-band):** Device A renders its AES-256-GCM key as a QR *key envelope*
+  (`{v, alg, k}`). Device B scans or pastes it. The key travels device-to-device only.
+- **Ciphertext path (through the cloud):** the blind relay holds `{id, ciphertext, iv,
+  created_at}` and nothing else — there is no key field and key-shaped writes are rejected,
+  so "the cloud never held the key" is structural, not a promise.
+- **Proof:** ciphertext alone is useless — a device without the transferred key hits
+  `InvalidTag`. With the key, Device B recovers Device A's plaintext byte-for-byte.
+- Demo: web **Devices** tab. Headless proof: `python3 server/verify_cha22.py`.
+- Scope: 2 clients, one blob. No Signal-grade session ratchet (roadmap).
+
 ## Local model
 
 - Gemma 3 270M (Q4) via Transformers.js + WebGPU in MV3 offscreen document.

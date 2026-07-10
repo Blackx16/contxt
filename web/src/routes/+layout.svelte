@@ -7,7 +7,8 @@
 
 	const nav = [
 		{ href: '/onboarding', label: 'Connect' },
-		{ href: '/viewer', label: 'Context' }
+		{ href: '/viewer', label: 'Context' },
+		{ href: '/multi-device', label: 'Devices' }
 	];
 </script>
 

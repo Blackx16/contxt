@@ -15,6 +15,11 @@ Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) shipped memory in 2026 — fiv
 ## Pipeline
 Ingest (Gmail + Calendar + Notion) -> Gateway (tier decision, on-device) -> Distill (local/cloud Gemma -> context cards) -> Store (E2E blind relay for PRIVATE; cloud store for SHARED) -> Serve over MCP (`get_context` / `draft_reply`) -> any AI.
 
+## Multi-device (QR key transfer)
+The PRIVATE key never touches the cloud. To bring your context to a second device, Device A shows the key as a QR envelope; Device B scans (or pastes) it, pulls the ciphertext from the blind relay, and decrypts the same card locally. Only ciphertext moves through the cloud — the relay structurally has no key field.
+- Demo: run the web app → **Devices** tab (`web/src/routes/multi-device`).
+- Proof: `python3 server/verify_cha22.py` · tests: `pytest tests/test_multidevice.py`.
+
 ## Stack
 - Frontend: SvelteKit web app + browser extension
 - Local model: Gemma 3 270M (Q4) via Transformers.js + WebGPU (MV3 offscreen document); Ollama sidecar fallback
@@ -28,7 +33,8 @@ Ingest (Gmail + Calendar + Notion) -> Gateway (tier decision, on-device) -> Dist
 | `ingest/` | Read-only source adapters (Gmail + Calendar + Notion) → normalized `IngestItem[]` |
 | `schema/` | Frozen shared contract — context-card JSON Schema + Python/TS mirrors |
 | `gateway/` | Crown-Jewels Gateway — rules + Gemma classifier |
-| `server/` | Python MCP server (`get_context`, `draft_reply`) |
+| `server/` | Python MCP server (`get_context`, `draft_reply`) + blind relay (`relay.py`) |
+| `web/` | SvelteKit app — onboarding, context viewer, multi-device QR key transfer |
 | `extension/` | MV3 browser extension — offscreen Transformers.js runtime |
 | `docs/` | Architecture |
 
