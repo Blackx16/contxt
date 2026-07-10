@@ -12,7 +12,7 @@
  */
 
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const DEFAULT_MODEL = 'accounts/fireworks/models/gemma-3-27b-it';
+const DEFAULT_MODEL = 'accounts/fireworks/models/gemma-4-31b-it';
 
 const VALID_SOURCES = ['gmail', 'calendar', 'notion'];
 const VALID_ENTITY_TYPES = [

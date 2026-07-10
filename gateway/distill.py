@@ -1,6 +1,6 @@
 """Cloud Gemma distillation — SHARED-tier items → context cards.
 
-Uses Fireworks AI (gemma-3-27b-it) or an AMD Dev Cloud endpoint.
+Uses cloud Gemma 4 (gemma-4-31b-it) on Fireworks AI or an AMD Dev Cloud endpoint.
 PRIVATE-tier items are BLOCKED — they must never reach this function.
 
 Prize target: AMD Dev Cloud → "Best AMD-Hosted Gemma Project" ($2k).
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 _FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
 _DEFAULT_MODEL = os.getenv(
-    "GEMMA_CLOUD_MODEL", "accounts/fireworks/models/gemma-3-27b-it"
+    "GEMMA_CLOUD_MODEL", "accounts/fireworks/models/gemma-4-31b-it"
 )
 _AMD_ENDPOINT = os.getenv("AMD_CLOUD_ENDPOINT", "")
 
