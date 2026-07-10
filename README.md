@@ -25,6 +25,8 @@ Ingest (Gmail + Calendar + Notion) -> Gateway (tier decision, on-device) -> Dist
 ## Repo layout
 | Path | What |
 | --- | --- |
+| `ingest/` | Read-only source adapters (Gmail + Calendar + Notion) → normalized `IngestItem[]` |
+| `schema/` | Frozen shared contract — context-card JSON Schema + Python/TS mirrors |
 | `gateway/` | Crown-Jewels Gateway — rules + Gemma classifier |
 | `server/` | Python MCP server (`get_context`, `draft_reply`) |
 | `extension/` | MV3 browser extension — offscreen Transformers.js runtime |

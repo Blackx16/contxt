@@ -206,6 +206,13 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# Contxt — ingest live credentials (never commit tokens/secrets)
+secrets/
+*client_secret*.json
+*google_token*.json
+google_token.json
+.env
+
 # PyPI configuration file
 .pypirc
 

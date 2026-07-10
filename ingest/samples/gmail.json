@@ -1,0 +1,52 @@
+[
+  {
+    "id": "19f4bbf73939e057",
+    "threadId": "19f4bbf73939e057",
+    "from": "Modern Freedom by Tim Denning <timdenning@substack.com>",
+    "to": "chandraveer1601@gmail.com",
+    "subject": "Nothing regulates your nervous system like financial stability.",
+    "date": "2026-07-10T11:04:08Z",
+    "labels": ["UNREAD", "CATEGORY_UPDATES", "INBOX"],
+    "body": "Not having enough money is a mental illness. Juliete Mirella suggests that when you have financial stability it regulates your nervous system — a sense of safety the modern job can no longer deliver. The antidote is to reduce chronic uncertainty."
+  },
+  {
+    "id": "19f4a649a4d33924",
+    "threadId": "19f4a649a4d33924",
+    "from": "Alex Heath <sourcesnews@substack.com>",
+    "to": "chandraveer1601@gmail.com",
+    "subject": "Why Meta is selling AI models now",
+    "date": "2026-07-10T04:58:36Z",
+    "labels": ["UNREAD", "CATEGORY_UPDATES", "INBOX"],
+    "body": "Alexandr Wang says Meta now sees its new model API as a real business, putting it in more competition with OpenAI, Anthropic, and Google. He called the pricing one of the most attractive in the market and said the API plugs into the OpenAI SDK so developers can point their existing stack at Meta's model."
+  },
+  {
+    "id": "19f4a3c8a116e48f",
+    "threadId": "19f4a3c8a116e48f",
+    "from": "google-labs-jules[bot] <notifications@github.com>",
+    "to": "Blackx16/emailagg <emailagg@noreply.github.com>",
+    "subject": "[Blackx16/emailagg] Sentinel: [HIGH] Fix XSS vulnerability in OAuth callback HTML response (PR #21)",
+    "date": "2026-07-10T04:15:09Z",
+    "labels": ["UNREAD", "IMPORTANT", "CATEGORY_UPDATES", "INBOX"],
+    "body": "In backend/app/api/routes/auth.py, register_oauth_account interpolated untrusted variables (provider and email from OAuth flows) directly into an HTML response — a Cross-Site Scripting (XSS) vulnerability. The fix sanitizes them with Python's html.escape() before rendering. View the pull request at https://github.com/Blackx16/emailagg/pull/21"
+  },
+  {
+    "id": "19f45ceb0d7342ca",
+    "threadId": "19f45ceb0d7342ca",
+    "from": "Vi <MNP-Overdue@vodafoneideamailer.com>",
+    "to": "chandraveer1601@gmail.com",
+    "subject": "Outstanding on your Vi Number - MNP",
+    "date": "2026-07-09T13:06:41+05:30",
+    "labels": ["CATEGORY_UPDATES", "INBOX"],
+    "body": "Please note the outstanding of ₹1021.35 on your last bill generated after your port-out request. As per Government guidelines you are required to clear the outstanding amount immediately to avoid impact to your mobile number portability."
+  },
+  {
+    "id": "19f4921b205a2397",
+    "threadId": "19f4921b205a2397",
+    "from": "Google Play <googleplay-noreply@google.com>",
+    "to": "chandraveer1601@gmail.com",
+    "subject": "Your Google Play Order Receipt from Jul 10, 2026",
+    "date": "2026-07-09T16:06:12-07:00",
+    "labels": ["UNREAD", "IMPORTANT", "CATEGORY_UPDATES", "INBOX"],
+    "body": "Thank you. You've made a purchase from Niantic, Inc. on Google Play. Order number: GPA.****-****-****-*****. Item: 100 PokeCoins (Pokemon GO). Total: ₹99.00."
+  }
+]
