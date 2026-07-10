@@ -1,18 +1,28 @@
 <script lang="ts">
 	import type { ContextCard } from '$lib/types';
 
-	let { card }: { card: ContextCard } = $props();
+	let {
+		card,
+		onDecrypt,
+		onLock,
+		encryptedBlob = null
+	}: {
+		card: ContextCard;
+		onDecrypt?: () => void;
+		onLock?: () => void;
+		encryptedBlob?: { ciphertext: string; iv: string } | null;
+	} = $props();
 
 	const isPrivate = $derived(card.tier === 'private');
-	const isEncrypted = $derived(!!card.encryption);
+	const isLocked = $derived(isPrivate && !card.summary && !card.body);
 	const pct = $derived(Math.round(card.sensitivity_score * 100));
 
 	function shortCipher(c: string): string {
-		return c.length > 52 ? c.slice(0, 52) + '…' : c;
+		return c.length > 64 ? c.slice(0, 64) + '…' : c;
 	}
 </script>
 
-<article class="card">
+<article class="card" class:card-private={isPrivate} class:card-locked={isLocked}>
 	<header class="card-head">
 		<span class="src mono">{card.source}</span>
 		<span class="tag {isPrivate ? 'tag-private' : 'tag-shared'}">
@@ -22,15 +32,26 @@
 
 	<h3 class="card-title">{card.title}</h3>
 
-	{#if isEncrypted}
+	{#if isLocked && encryptedBlob}
+		<!-- Locked PRIVATE card — show the ciphertext blob (the money-shot) -->
 		<div class="locked">
-			<div class="locked-row mono">Encrypted on-device · cloud stores ciphertext only</div>
-			<code class="cipher mono">{shortCipher(card.encryption!.ciphertext)}</code>
-			<div class="crypto-meta mono">
-				{card.encryption!.alg} · key {card.encryption!.key_ref}
+			<div class="locked-label mono">
+				<svg class="lock-icon" viewBox="0 0 16 16" aria-hidden="true">
+					<rect x="3" y="7" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+					<path d="M5 7V5a3 3 0 1 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+				</svg>
+				AES-256-GCM · cloud holds ciphertext only
 			</div>
+			<code class="cipher mono">{shortCipher(encryptedBlob.ciphertext)}</code>
+			<div class="cipher-meta mono">iv: {encryptedBlob.iv.slice(0, 16)}…</div>
+			{#if onDecrypt}
+				<button class="btn-decrypt" onclick={onDecrypt}>
+					Decrypt locally
+				</button>
+			{/if}
 		</div>
-	{:else}
+	{:else if isPrivate && !isLocked}
+		<!-- Revealed PRIVATE card -->
 		{#if card.summary}
 			<p class="summary">{card.summary}</p>
 		{/if}
@@ -44,17 +65,33 @@
 				{/each}
 			</div>
 		{/if}
-		{#if isPrivate}
-			<div class="ondevice mono">Decrypted locally — never leaves this device</div>
+		<div class="ondevice mono">
+			Decrypted locally — plaintext never left this device
+			{#if onLock}
+				<button class="btn-lock" onclick={onLock}>Lock</button>
+			{/if}
+		</div>
+	{:else}
+		<!-- SHARED card -->
+		{#if card.summary}
+			<p class="summary">{card.summary}</p>
+		{/if}
+		{#if card.body}
+			<p class="body">{card.body}</p>
+		{/if}
+		{#if card.entities.length}
+			<div class="entities">
+				{#each card.entities as e (e.type + e.value)}
+					<span class="entity"><span class="etype mono">{e.type}</span>{e.value}</span>
+				{/each}
+			</div>
 		{/if}
 	{/if}
 
 	<footer class="card-foot">
 		<div class="sens" title="Sensitivity score">
 			<span class="sens-label mono">sensitivity</span>
-			<span class="meter"
-				><span class="fill" class:hot={isPrivate} style="width:{pct}%"></span></span
-			>
+			<span class="meter"><span class="fill" class:hot={isPrivate} style="width:{pct}%"></span></span>
 			<span class="sens-val mono">{pct}%</span>
 		</div>
 		<time class="ts mono">{new Date(card.created_at).toLocaleDateString()}</time>
@@ -77,6 +114,12 @@
 	.card:hover {
 		border-color: var(--rule-strong);
 		transform: translateY(-2px);
+	}
+	.card-private {
+		border-color: color-mix(in srgb, var(--gold) 22%, var(--rule));
+	}
+	.card-locked {
+		border-color: color-mix(in srgb, var(--gold) 38%, var(--rule));
 	}
 	.card-head {
 		display: flex;
@@ -129,11 +172,31 @@
 		letter-spacing: 0.08em;
 	}
 	.ondevice {
+		display: flex;
+		align-items: center;
+		gap: 10px;
 		color: var(--gold-rich);
 		font-size: 0.72rem;
 		letter-spacing: 0.02em;
 	}
-	/* Inset technical panel — a distinct material surface, not a nested card */
+	.btn-lock {
+		border: none;
+		background: transparent;
+		color: var(--text-faint);
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.06em;
+		cursor: pointer;
+		padding: 2px 6px;
+		border-radius: var(--r-xs);
+		border: 1px solid var(--rule);
+		transition: color 0.12s var(--ease), border-color 0.12s var(--ease);
+	}
+	.btn-lock:hover {
+		color: var(--champagne);
+		border-color: var(--rule-strong);
+	}
+	/* Locked panel — shows the raw ciphertext blob */
 	.locked {
 		background: var(--lacquer-deep);
 		border: 1px solid var(--rule-strong);
@@ -143,10 +206,18 @@
 		flex-direction: column;
 		gap: 9px;
 	}
-	.locked-row {
+	.locked-label {
+		display: flex;
+		align-items: center;
+		gap: 7px;
 		color: var(--gold);
 		font-size: 0.72rem;
 		letter-spacing: 0.02em;
+	}
+	.lock-icon {
+		width: 13px;
+		height: 13px;
+		flex-shrink: 0;
 	}
 	.cipher {
 		display: block;
@@ -154,12 +225,31 @@
 		font-size: 0.74rem;
 		letter-spacing: 0;
 		word-break: break-all;
-		opacity: 0.85;
+		opacity: 0.75;
 	}
-	.crypto-meta {
-		font-size: 0.66rem;
+	.cipher-meta {
+		font-size: 0.65rem;
 		color: var(--text-faint);
-		letter-spacing: 0;
+	}
+	.btn-decrypt {
+		align-self: flex-start;
+		border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--rule));
+		background: color-mix(in srgb, var(--gold) 8%, transparent);
+		color: var(--gold);
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		padding: 6px 14px;
+		border-radius: var(--r-sm);
+		cursor: pointer;
+		transition:
+			background 0.15s var(--ease),
+			border-color 0.15s var(--ease);
+	}
+	.btn-decrypt:hover {
+		background: color-mix(in srgb, var(--gold) 15%, transparent);
+		border-color: var(--gold);
 	}
 	.card-foot {
 		display: flex;

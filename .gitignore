@@ -213,6 +213,9 @@ secrets/
 google_token.json
 .env
 
+# Contxt — SQLite store (CHA-19). Contains live user data; never commit.
+data/
+
 # PyPI configuration file
 .pypirc
 

@@ -1,10 +1,22 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import CardItem from '$lib/components/CardItem.svelte';
-	import { loadCards, connectedSources } from '$lib/state.svelte';
+	import {
+		loadCards,
+		connectedSources,
+		initCrypto,
+		decryptCard,
+		lockCard,
+		getEncryptedBlob,
+		cryptoReady,
+		getKeyForDisplay
+	} from '$lib/state.svelte';
 	import type { Tier } from '$lib/types';
 
 	type Filter = 'all' | Tier;
 	let filter = $state<Filter>('all');
+	let showKey = $state(false);
+	let decryptingId = $state<string | null>(null);
 
 	const cards = $derived(loadCards());
 	const connected = $derived(connectedSources());
@@ -17,6 +29,19 @@
 		{ id: 'shared', label: 'Shared' },
 		{ id: 'private', label: 'Private' }
 	];
+
+	async function handleDecrypt(cardId: string) {
+		decryptingId = cardId;
+		try {
+			await decryptCard(cardId);
+		} finally {
+			decryptingId = null;
+		}
+	}
+
+	onMount(() => {
+		initCrypto();
+	});
 </script>
 
 <section class="head">
@@ -31,26 +56,38 @@
 			<span class="c-private">{privateCount} private</span>
 		</p>
 	</div>
-	{#if cards.length}
-		<div class="filters">
-			{#each filters as f (f.id)}
-				<button class="chip" class:active={filter === f.id} onclick={() => (filter = f.id)}>
-					{f.label}
-				</button>
-			{/each}
-		</div>
-	{/if}
+	<div class="head-right">
+		{#if cryptoReady.value}
+			<button class="chip chip-key" onclick={() => (showKey = !showKey)} title="Key management">
+				🔑 {showKey ? 'Hide key' : 'Key sync'}
+			</button>
+		{/if}
+		{#if cards.length}
+			<div class="filters">
+				{#each filters as f (f.id)}
+					<button class="chip" class:active={filter === f.id} onclick={() => (filter = f.id)}>
+						{f.label}
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </section>
+
+{#if showKey && cryptoReady.value}
+	<div class="key-panel">
+		<p class="key-label mono">PRIVATE KEY — copy to server .env or scan QR on another device</p>
+		<code class="key-val mono">{getKeyForDisplay()}</code>
+		<p class="key-hint mono">
+			Set <strong>CONTXT_PRIVATE_KEY=</strong>&lt;above&gt; in .env, then restart the MCP server.
+		</p>
+	</div>
+{/if}
 
 {#if cards.length === 0}
 	<div class="empty">
 		<svg class="empty-icon" viewBox="0 0 32 32" aria-hidden="true">
-			<path
-				d="M4 4 H28 V28 H4 Z M28 4 L4 28"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2.2"
-			/>
+			<path d="M4 4 H28 V28 H4 Z M28 4 L4 28" fill="none" stroke="currentColor" stroke-width="2.2" />
 		</svg>
 		<h2>No context yet</h2>
 		<p>Connect a source and Contxt will ingest it, then show your distilled context cards here.</p>
@@ -59,7 +96,14 @@
 {:else}
 	<div class="grid">
 		{#each shown as card (card.id)}
-			<CardItem {card} />
+			<CardItem
+				{card}
+				encryptedBlob={cryptoReady.value ? getEncryptedBlob(card.id) : null}
+				onDecrypt={card.tier === 'private'
+					? () => handleDecrypt(card.id)
+					: undefined}
+				onLock={card.tier === 'private' ? () => lockCard(card.id) : undefined}
+			/>
 		{/each}
 	</div>
 	{#if shown.length === 0}
@@ -87,6 +131,12 @@
 	}
 	.c-private {
 		color: var(--gold);
+	}
+	.head-right {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
 	}
 	.filters {
 		display: flex;
@@ -117,6 +167,44 @@
 	.chip.active {
 		background: var(--graphite-2);
 		color: var(--gold);
+	}
+	.chip-key {
+		border: 1px solid var(--rule);
+		font-size: 0.7rem;
+		padding: 6px 12px;
+	}
+	.key-panel {
+		background: var(--lacquer-deep);
+		border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--rule));
+		border-radius: var(--r-lg);
+		padding: 20px;
+		margin-bottom: 24px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.key-label {
+		color: var(--gold);
+		font-size: 0.72rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		margin: 0;
+	}
+	.key-val {
+		display: block;
+		word-break: break-all;
+		background: var(--graphite);
+		border: 1px solid var(--rule);
+		border-radius: var(--r-sm);
+		padding: 10px 12px;
+		font-size: 0.78rem;
+		color: var(--champagne);
+		user-select: all;
+	}
+	.key-hint {
+		margin: 0;
+		color: var(--text-faint);
+		font-size: 0.68rem;
 	}
 	.grid {
 		display: grid;

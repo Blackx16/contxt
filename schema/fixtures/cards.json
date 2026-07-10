@@ -40,18 +40,17 @@
     "tier": "private",
     "source": "gmail",
     "title": "ICICI loan EMI due",
-    "summary": null,
-    "body": null,
-    "entities": [],
+    "summary": "ICICI Bank loan EMI of ₹14,200 due 2026-07-15. Account ending 4821. Auto-debit scheduled.",
+    "body": "Payment due: 2026-07-15. Amount: ₹14,200. Loan account: XXXX4821. Ensure sufficient balance in savings account before the debit date.",
+    "entities": [
+      { "type": "money", "value": "₹14,200" },
+      { "type": "date", "value": "2026-07-15" },
+      { "type": "org", "value": "ICICI Bank" }
+    ],
     "sensitivity_score": 1.0,
     "created_at": "2026-07-09T03:15:00Z",
     "embedding_ref": null,
-    "encryption": {
-      "alg": "AES-256-GCM",
-      "iv": "8Kx1Ypq2Zr0aBc3D",
-      "ciphertext": "q3JmVmVsZW5jcnlwdGVkLWNhcmQtY29udGVudC1wbGFjZWhvbGRlci1iYXNlNjR1cmw",
-      "key_ref": "ecdh:device-1:2026-07-08"
-    },
+    "encryption": null,
     "meta": { "thread_id": "gmail_thr_icici_emi", "rule_hits": ["money", "account", "kw:loan", "kw:emi"] }
   },
   {

@@ -11,10 +11,15 @@ Tools
       Draft a context-aware reply using cloud Gemma + SHARED context cards.
       PRIVATE cards are never sent to the cloud model.
 
-Store
------
-  Fixture JSON for v1 demo (schema/fixtures/cards.json).
-  Swap _get_cards() for a real SQLite + vector store in prod.
+Store (CHA-19)
+--------------
+  SQLite two-tier store at data/contxt.db (created automatically).
+
+    private_cards(id, ciphertext, nonce, created_at)   ← AES-256-GCM encrypted
+    shared_cards (id, data JSON,  created_at)           ← cloud-readable
+
+  The server decrypts PRIVATE cards in-process using CONTXT_PRIVATE_KEY.
+  Anyone who opens the SQLite file without the key sees opaque ciphertext.
 
 Claude Desktop registration
 ---------------------------
@@ -23,7 +28,10 @@ Claude Desktop registration
     "contxt": {
       "command": "python",
       "args": ["/path/to/contxt/server/mcp_server.py"],
-      "env": { "FIREWORKS_API_KEY": "<your key>" }
+      "env": {
+        "FIREWORKS_API_KEY": "<your key>",
+        "CONTXT_PRIVATE_KEY": "<base64url 256-bit key from .env>"
+      }
     }
 
   Then restart Claude Desktop and call: get_context("what am I working on")
@@ -65,21 +73,109 @@ try:
 except ImportError:
     _DISTILL_OK = False
 
+try:
+    from server.crypto_utils import ensure_key, encrypt, decrypt
+    from server.store import TwoTierStore
+    _STORE_OK = True
+except ImportError:
+    try:
+        from crypto_utils import ensure_key, encrypt, decrypt
+        from store import TwoTierStore
+        _STORE_OK = True
+    except ImportError:
+        _STORE_OK = False
+
 app = FastMCP("contxt") if _MCP_OK else None
 
-# ── In-memory card store (fixture-backed for demo) ────────────────────────────
+# ── SQLite store + key (CHA-19) ───────────────────────────────────────────────
 
-_CARDS: list[ContextCard] | None = None
+_store: TwoTierStore | None = None
+_private_key: bytes | None = None
 
+
+def _get_store() -> TwoTierStore:
+    global _store, _private_key
+    if _store is None:
+        if not _STORE_OK:
+            raise RuntimeError(
+                "Store/crypto not available — run: pip install -r server/requirements.txt"
+            )
+        db_path = os.getenv("CONTXT_DB", "data/contxt.db")
+        _store = TwoTierStore(db_path)
+        _private_key = ensure_key()
+        if _store.is_empty() and _SCHEMA_OK:
+            _seed_store(_store, _private_key)
+            counts = _store.counts()
+            print(
+                f"[contxt] Seeded SQLite store — "
+                f"{counts['shared']} shared, {counts['private']} private (encrypted).",
+                file=sys.stderr,
+            )
+    return _store
+
+
+def _seed_store(store: TwoTierStore, key: bytes) -> None:
+    """Populate an empty store from the fixture JSON.
+
+    SHARED cards are inserted as plaintext JSON.
+    PRIVATE cards have their content encrypted before storage — only the id
+    and created_at are kept in the clear as index columns.
+    """
+    fixture_cards = load_fixture_cards()
+    for card in fixture_cards:
+        ca = card.created_at.isoformat()
+        if card.tier == Tier.SHARED:
+            store.put_shared(
+                id=card.id,
+                data=card.model_dump(mode="json"),
+                created_at=ca,
+            )
+        else:
+            # Encrypt the full card JSON (all fields except id / created_at).
+            payload = card.model_dump(mode="json")
+            payload.pop("id", None)
+            payload.pop("created_at", None)
+            ct, nonce = encrypt(json.dumps(payload, ensure_ascii=False), key)
+            store.put_private(id=card.id, ciphertext=ct, nonce=nonce, created_at=ca)
+
+
+# ── card loading ──────────────────────────────────────────────────────────────
 
 def _get_cards() -> list[ContextCard]:
-    global _CARDS
-    if _CARDS is None:
-        if _SCHEMA_OK:
-            _CARDS = load_fixture_cards()
-        else:
-            _CARDS = []
-    return _CARDS
+    """Load all cards from SQLite.
+
+    PRIVATE rows are decrypted in-process using the local key — their plaintext
+    never leaves this process. Callers that forward cards to cloud models must
+    filter to SHARED only (see draft_reply).
+    """
+    if not _SCHEMA_OK:
+        return []
+
+    store = _get_store()
+    cards: list[ContextCard] = []
+
+    # SHARED — plaintext, cloud-readable
+    for data in store.get_all_shared():
+        try:
+            cards.append(ContextCard.model_validate(data))
+        except Exception:
+            pass  # skip malformed rows; don't crash the server
+
+    # PRIVATE — decrypt in-process with the local key
+    if _private_key:
+        for row in store.get_all_private_raw():
+            try:
+                plaintext = decrypt(row["ciphertext"], row["nonce"], _private_key)
+                payload = json.loads(plaintext)
+                payload["id"] = row["id"]
+                payload["created_at"] = row["created_at"]
+                # Decrypted card: clear any lingering encryption block
+                payload["encryption"] = None
+                cards.append(ContextCard.model_validate(payload))
+            except Exception:
+                pass  # tampered / wrong key — skip silently
+
+    return cards
 
 
 def _score_card(card: ContextCard, tokens: list[str]) -> float:
@@ -91,12 +187,10 @@ def _score_card(card: ContextCard, tokens: list[str]) -> float:
         parts.append(card.body)
     parts.extend(e.value for e in card.entities)
     haystack = " ".join(parts).lower()
-    # Use word sets to prevent 'emi' matching inside 'reminder' etc.
     words = set(re.findall(r"\w+", haystack))
     hits = sum(1 for t in tokens if t in words)
     if hits == 0:
         return 0.0
-    # SHARED cards get a small tiebreaker boost so they rank ahead of PRIVATE on ties
     boost = 0.05 if card.tier == Tier.SHARED else 0.0
     return hits + boost
 
@@ -108,8 +202,7 @@ def _search_cards(query: str, limit: int = 8) -> list[ContextCard]:
     decrypted in-process and their plaintext is never forwarded to any cloud
     service.
 
-    Fallback: when no keywords match (e.g. "what am I working on"), return
-    the most recent SHARED cards so the query always returns useful context.
+    Fallback: when no keywords match, return the most recent SHARED cards.
     """
     cards = _get_cards()
     tokens = [t for t in re.findall(r"\w+", query.lower()) if len(t) > 2]
@@ -122,7 +215,6 @@ def _search_cards(query: str, limit: int = 8) -> list[ContextCard]:
     matched = [c for c, s in ranked if s > 0]
 
     if not matched:
-        # No keyword hits — fall back to most recent SHARED cards for general context
         shared = [c for c in cards if c.tier == Tier.SHARED]
         return sorted(shared, key=lambda c: c.created_at, reverse=True)[:limit]
 
@@ -171,7 +263,6 @@ if app:
             return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
 
         all_cards = _search_cards(email, limit=6)
-        # Privacy guard: only SHARED cards go to the cloud model
         shared = [c for c in all_cards if c.tier == Tier.SHARED]
 
         cards_ctx = json.dumps(
@@ -209,7 +300,18 @@ if __name__ == "__main__":
         print("Install deps first: pip install -r server/requirements.txt")
         sys.exit(1)
     if not _SCHEMA_OK:
-        # NB: never write to stdout — it is the stdio JSON-RPC channel. Logs → stderr.
         print("Warning: pydantic not installed — schema validation disabled", file=sys.stderr)
+    # Eagerly initialize so seeding messages appear before the server silences stderr.
+    try:
+        _get_store()
+        counts = _get_store().counts()
+        print(
+            f"[contxt] Store ready — {counts['shared']} shared, "
+            f"{counts['private']} private (encrypted). "
+            f"DB: {_store.db_path}",
+            file=sys.stderr,
+        )
+    except Exception as exc:
+        print(f"[contxt] Store init failed: {exc}", file=sys.stderr)
     print("Starting Contxt MCP server…", file=sys.stderr)
     app.run()
