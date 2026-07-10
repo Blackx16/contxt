@@ -15,12 +15,34 @@ Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) shipped memory in 2026 — fiv
 ## Pipeline
 Ingest (Gmail + Calendar + Notion) -> Gateway (tier decision, on-device) -> Distill (local/cloud Gemma -> context cards) -> Store (E2E blind relay for PRIVATE; cloud store for SHARED) -> Serve over MCP (`get_context` / `draft_reply`) -> any AI.
 
+## Multi-device (QR key transfer)
+The PRIVATE key never touches the cloud. To bring your context to a second device, Device A shows the key as a QR envelope; Device B scans (or pastes) it, pulls the ciphertext from the blind relay, and decrypts the same card locally. Only ciphertext moves through the cloud — the relay structurally has no key field.
+- Demo: run the web app → **Devices** tab (`web/src/routes/multi-device`).
+- Proof: `python3 server/verify_cha22.py` · tests: `pytest tests/test_multidevice.py`.
+
+## Inject into any AI (browser extension)
+The extension puts your context into whatever AI you're already using. On Claude,
+ChatGPT, or Gemini it auto-injects your **SHARED** context cards into the composer
+and shows a badge — *N shared → this AI · P private kept on-device*. The crown
+jewels never travel: the browser only ever talks to a local HTTP bridge that
+serves SHARED cards only (PRIVATE plaintext is never put on the wire).
+
+```
+# 1. start the local bridge (fronts the MCP server's get_context/draft_reply over HTTP)
+python3 server/http_bridge.py            # → http://127.0.0.1:8787
+
+# 2. load the extension: chrome://extensions → Developer mode → Load unpacked → extension/
+# 3. open claude.ai / chatgpt.com / gemini.google.com — context is injected on load
+```
+- Offline? The extension falls back to a bundled fixture, so it always injects.
+- Proof: `python3 server/verify_cha26.py` (boots the bridge, asserts zero private leakage).
+
 ## Stack
 - Frontend: SvelteKit web app + browser extension
 - Local model: Gemma 3 270M (Q4) via Transformers.js + WebGPU (MV3 offscreen document); Ollama sidecar fallback
 - Cloud model: Gemma on Fireworks / AMD Dev Cloud
 - Encryption: Web Crypto API (AES-256-GCM + ECDH), QR key transfer for multi-device
-- Server: Python MCP server
+- Server: Python MCP server (stdio) + a local HTTP bridge so the browser can reach the same tools
 
 ## Repo layout
 | Path | What |
@@ -28,8 +50,9 @@ Ingest (Gmail + Calendar + Notion) -> Gateway (tier decision, on-device) -> Dist
 | `ingest/` | Read-only source adapters (Gmail + Calendar + Notion) → normalized `IngestItem[]` |
 | `schema/` | Frozen shared contract — context-card JSON Schema + Python/TS mirrors |
 | `gateway/` | Crown-Jewels Gateway — rules + Gemma classifier |
-| `server/` | Python MCP server (`get_context`, `draft_reply`) |
-| `extension/` | MV3 browser extension — offscreen Transformers.js runtime |
+| `server/` | Python MCP server (`get_context`, `draft_reply`) + HTTP bridge (`http_bridge.py`) + blind relay (`relay.py`) |
+| `web/` | SvelteKit app — onboarding, context viewer, multi-device QR key transfer |
+| `extension/` | MV3 extension — offscreen Gemma runtime + content script that injects SHARED context into any AI |
 | `docs/` | Architecture |
 
 ## Status

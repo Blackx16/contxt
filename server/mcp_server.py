@@ -228,6 +228,96 @@ def _card_to_dict(card: ContextCard, *, strip_encryption: bool = True) -> dict:
     return d
 
 
+# ── Tool cores (importable — shared by the MCP tools AND the HTTP bridge) ──────
+#
+# The MCP server speaks stdio (Claude Desktop). Browsers can't speak stdio, so
+# the browser extension talks to server/http_bridge.py instead — which calls the
+# SAME functions below. One source of truth, two transports.
+
+
+def context_payload(query: str, limit: int = 8, *, include_private: bool = True) -> dict:
+    """Return context cards relevant to `query`.
+
+    include_private=True  → serve PRIVATE cards too. Safe for the MCP tool
+                            because that path is on-device / local-model.
+    include_private=False → SHARED cards only, plus a `private_withheld` count.
+                            The HTTP bridge uses this: PRIVATE plaintext never
+                            crosses into a cloud-facing surface (the browser
+                            injecting context into Claude / ChatGPT / Gemini).
+    """
+    if not _SCHEMA_OK:
+        return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
+
+    limit = min(max(limit, 1), 50)
+
+    if include_private:
+        cards = _search_cards(query, limit)
+        result = [_card_to_dict(c) for c in cards]
+        return {"cards": result, "query": query, "total": len(result)}
+
+    # Browser path: rank a generous candidate set, filter to SHARED, and only
+    # THEN apply the limit. Filtering before limiting matters — otherwise a query
+    # with several matching PRIVATE cards ranked ahead of the SHARED ones would
+    # starve the injectable set (the top-`limit` slice could be all private,
+    # leaving too few — or zero — shared cards to serve).
+    ranked = _search_cards(query, 50)
+    shared = [c for c in ranked if c.tier == Tier.SHARED]
+    withheld = len(ranked) - len(shared)  # PRIVATE cards that matched THIS query
+    shared = shared[:limit]
+
+    payload = {
+        "cards": [_card_to_dict(c) for c in shared],
+        "query": query,
+        "total": len(shared),
+        "private_withheld": withheld,
+    }
+    # Always-on trust signal: how many crown jewels live on-device in total,
+    # independent of whether they matched the query. The badge shows this.
+    try:
+        payload["private_total"] = _get_store().counts()["private"]
+    except Exception:
+        pass
+    return payload
+
+
+def draft_reply_payload(email: str, max_words: int = 150) -> dict:
+    """Draft a context-aware reply using SHARED cards only.
+
+    PRIVATE cards are retrieved locally for the `private_cards_excluded` audit
+    count but their content is NEVER forwarded to the cloud drafting model.
+    """
+    if not _SCHEMA_OK:
+        return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
+    if not _DISTILL_OK:
+        return {"error": "gateway.distill not available — run: pip install -r server/requirements.txt"}
+
+    all_cards = _search_cards(email, limit=6)
+    shared = [c for c in all_cards if c.tier == Tier.SHARED]
+    private_excluded = len(all_cards) - len(shared)
+
+    # Only SHARED fields go into the prompt — private content is never serialized here.
+    cards_ctx = json.dumps(
+        [
+            {
+                "title": c.title,
+                "summary": c.summary,
+                "body": c.body,
+                "entities": [e.model_dump() for e in c.entities],
+            }
+            for c in shared
+        ],
+        indent=2,
+    )
+
+    draft = _cloud_draft(email, cards_ctx, max_words=max_words)
+
+    return {
+        "draft": draft,
+        "used_card_ids": [c.id for c in shared],
+        "private_cards_excluded": private_excluded,
+    }
+
+
 # ── MCP tools ─────────────────────────────────────────────────────────────────
 
 if app:
@@ -240,57 +330,20 @@ if app:
         PRIVATE cards are served only because this MCP server is local — they
         are decrypted in-process and never forwarded to a cloud model.
         """
-        if not _SCHEMA_OK:
-            return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
-
-        cards = _search_cards(query, min(max(limit, 1), 50))
-        result = [_card_to_dict(c) for c in cards]
-
-        return {
-            "cards": result,
-            "query": query,
-            "total": len(result),
-        }
+        return context_payload(query, limit, include_private=True)
 
     @app.tool()
     def draft_reply(email: str, max_words: int = 150) -> dict:
-        """Draft a context-aware reply to an email.
+        """Draft a context-aware reply to an email or message thread.
 
-        Uses SHARED context cards only — PRIVATE cards are intentionally
-        excluded from cloud Gemma calls to protect user privacy.
+        Uses SHARED context cards only — PRIVATE cards are retrieved locally
+        for the `private_cards_excluded` audit count but their content is
+        NEVER forwarded to the cloud drafting model. This is the privacy
+        guarantee: the drafting AI sees only what the user consented to share.
+
+        Set CONTXT_MOCK_GEMMA=1 to draft offline without a cloud API key.
         """
-        if not _SCHEMA_OK:
-            return {"error": "pydantic not installed — run: pip install -r server/requirements.txt"}
-
-        all_cards = _search_cards(email, limit=6)
-        shared = [c for c in all_cards if c.tier == Tier.SHARED]
-
-        cards_ctx = json.dumps(
-            [
-                {
-                    "title": c.title,
-                    "summary": c.summary,
-                    "body": c.body,
-                    "entities": [e.model_dump() for e in c.entities],
-                }
-                for c in shared
-            ],
-            indent=2,
-        )
-
-        if _DISTILL_OK and os.getenv("FIREWORKS_API_KEY"):
-            draft = _cloud_draft(email, cards_ctx, max_words=max_words)
-        else:
-            draft = (
-                "[cloud Gemma not wired — set FIREWORKS_API_KEY in .env]\n\n"
-                f"Relevant context ({len(shared)} SHARED card(s)):\n{cards_ctx}"
-            )
-
-        return {
-            "draft": draft,
-            "used_card_ids": [c.id for c in shared],
-            "private_cards_excluded": len(all_cards) - len(shared),
-        }
+        return draft_reply_payload(email, max_words)
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────

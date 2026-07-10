@@ -95,6 +95,7 @@
 		<code class="key-val mono">{getKeyForDisplay()}</code>
 		<p class="key-hint mono">
 			Set <strong>CONTXT_PRIVATE_KEY=</strong>&lt;above&gt; in .env, then restart the MCP server.
+			Moving to a second device? <a class="key-link" href="/multi-device">Transfer this key by QR →</a>
 		</p>
 	</div>
 {/if}
@@ -224,6 +225,14 @@
 		margin: 0;
 		color: var(--text-faint);
 		font-size: 0.68rem;
+	}
+	.key-link {
+		color: var(--gold);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.key-link:hover {
+		color: var(--gold-rich);
 	}
 	.grid {
 		display: grid;

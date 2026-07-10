@@ -1,0 +1,41 @@
+{
+  "cards": [
+    {
+      "id": "card_9f1c2a44-0001-4a10-8b21-000000000001",
+      "tier": "shared",
+      "source": "calendar",
+      "title": "Standup with Theerth — Contxt build",
+      "summary": "Daily 10:00 IST standup with Theerth K.R. to sync on the Contxt hackathon build ahead of the 2026-07-11 deadline.",
+      "body": null,
+      "entities": [
+        { "type": "person", "value": "Theerth K.R." },
+        { "type": "date", "value": "2026-07-11" }
+      ],
+      "sensitivity_score": 0.05,
+      "created_at": "2026-07-09T04:30:00Z",
+      "embedding_ref": "vec:shared:00001",
+      "encryption": null
+    },
+    {
+      "id": "card_9f1c2a44-0002-4a10-8b21-000000000002",
+      "tier": "shared",
+      "source": "notion",
+      "title": "Contxt architecture — two-tier model",
+      "summary": "Contxt is a portable, privacy-first context layer. Two tiers: PRIVATE (crown jewels, on-device Gemma, E2E encrypted, cloud is a blind relay) and SHARED (cloud Gemma, cloud-readable by any AI). The Crown-Jewels Gateway routes each item and is the trust boundary.",
+      "body": "Pipeline: Ingest (Gmail + Calendar + Notion) -> Gateway -> Distill -> Store -> Serve over MCP -> any AI.",
+      "entities": [
+        { "type": "org", "value": "Contxt" },
+        { "type": "misc", "value": "Crown-Jewels Gateway" }
+      ],
+      "sensitivity_score": 0.1,
+      "created_at": "2026-07-08T22:00:00Z",
+      "embedding_ref": "vec:shared:00002",
+      "encryption": null
+    }
+  ],
+  "query": "what am I working on",
+  "total": 2,
+  "private_withheld": 0,
+  "private_total": 2,
+  "source": "fixture"
+}

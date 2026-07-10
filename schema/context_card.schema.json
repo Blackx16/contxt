@@ -160,7 +160,11 @@
         "cards": {
           "type": "array",
           "items": { "$ref": "#/$defs/ContextCard" }
-        }
+        },
+        "query": { "type": "string", "description": "the query these cards were retrieved for (echoed back)." },
+        "total": { "type": "integer", "minimum": 0, "description": "number of cards returned." },
+        "private_withheld": { "type": "integer", "minimum": 0, "description": "SHARED-only browser path: PRIVATE cards matching the query that were withheld." },
+        "private_total": { "type": "integer", "minimum": 0, "description": "SHARED-only browser path: total PRIVATE cards on-device, never served." }
       }
     },
     "DraftReplyRequest": {
@@ -184,6 +188,12 @@
           "type": "array",
           "description": "ids of the context cards that grounded the draft.",
           "items": { "type": "string" }
+        },
+        "private_cards_excluded": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "count of PRIVATE cards retrieved locally but withheld from the cloud drafting model."
         }
       }
     }
