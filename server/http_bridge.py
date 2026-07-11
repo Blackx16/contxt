@@ -60,6 +60,9 @@ except Exception:  # pragma: no cover
     _get_store = None
 
 DEFAULT_PORT = int(os.getenv("CONTXT_BRIDGE_PORT", "8787"))
+# Bind host. Defaults to loopback (safe on a dev machine — not reachable off-box);
+# the Docker image sets 0.0.0.0 so the container is reachable via `-p`.
+DEFAULT_HOST = os.getenv("CONTXT_BRIDGE_HOST", "127.0.0.1")
 
 # CORS: only browser origins we trust may read responses cross-origin. The MV3
 # background worker (extension origin) fetches with host_permissions and needs
@@ -173,18 +176,18 @@ class BridgeHandler(BaseHTTPRequestHandler):
         return self._json({"error": f"unknown route {route}"}, 404)
 
 
-def build_server(port: int = DEFAULT_PORT) -> ThreadingHTTPServer:
+def build_server(port: int = DEFAULT_PORT, host: str = DEFAULT_HOST) -> ThreadingHTTPServer:
     """Construct the bridge server (bound, not yet serving).
 
     Exposed so tests (server/verify_cha26.py) can run it in a background thread.
     """
-    return ThreadingHTTPServer(("127.0.0.1", port), BridgeHandler)
+    return ThreadingHTTPServer((host, port), BridgeHandler)
 
 
-def serve(port: int = DEFAULT_PORT) -> None:
-    httpd = build_server(port)
+def serve(port: int = DEFAULT_PORT, host: str = DEFAULT_HOST) -> None:
+    httpd = build_server(port, host)
     print(
-        f"[contxt-bridge] serving on http://127.0.0.1:{port}  "
+        f"[contxt-bridge] serving on http://{host}:{port}  "
         f"(routes: /health /get_context /draft_reply)",
         file=sys.stderr,
     )
