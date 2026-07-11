@@ -41,8 +41,16 @@ def rule_hits(text, private_keywords=None):
     """
     if private_keywords is None:
         private_keywords = DEFAULT_PRIVATE_KEYWORDS
-    text = text or ""
+    # Coerce to str: this is the can't-miss guardrail, so a non-string item
+    # (int, list, None from a malformed ingest) must degrade to "no text",
+    # never crash the regex engine on `.search()` / `.lower()`.
+    text = "" if text is None else str(text)
     hits = [name for name, pat in _PATTERNS.items() if pat.search(text)]
-    lowered = text.lower()
-    hits += [f"kw:{kw}" for kw in private_keywords if kw in lowered]
+    # Keyword hits are case-insensitive WORD-boundary matches, not substrings, so
+    # "emi" fires on the loan term but not inside "reminder"/"premium". Still
+    # catches the whole keyword anywhere in the text; mixed-case toggles work too.
+    for kw in private_keywords:
+        k = str(kw).lower()
+        if re.search(r"\b" + re.escape(k) + r"\b", text, re.I):
+            hits.append(f"kw:{k}")
     return hits

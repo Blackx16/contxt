@@ -102,31 +102,49 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // injects something. Payload is SHARED-only + private counts either way.
   if (msg?.type === 'get:context') {
     const query = (msg.query || 'what am I working on').toString();
-    getBridgeConfig()
-      .then(({ url: base, token }) => {
-        const url =
-          base.replace(/\/$/, '') +
-          '/get_context?query=' +
-          encodeURIComponent(query) +
-          '&limit=6';
-        const opts = token ? { headers: { 'X-Contxt-Token': token } } : undefined;
-        return fetch(url, opts).then((r) => {
-          if (!r.ok) throw new Error('bridge HTTP ' + r.status);
-          return r.json();
+    // Resolution order — one source of truth with the popup:
+    //   1) LIVE cards the popup pulled from the user's own Gmail/Calendar/Notion
+    //      (cached in storage). 2) the local bridge (seeded store). 3) the bundled
+    //      offline fixture. PRIVATE cards are never in any of these payloads.
+    chrome.storage.local.get({ liveSharedCards: null, livePrivateCount: 0 }, (st) => {
+      if (Array.isArray(st.liveSharedCards) && st.liveSharedCards.length) {
+        sendResponse({
+          ok: true,
+          source: 'live',
+          query,
+          cards: st.liveSharedCards,
+          total: st.liveSharedCards.length,
+          private_withheld: st.livePrivateCount || 0,
+          private_total: st.livePrivateCount || 0,
         });
-      })
-      .then((data) => sendResponse({ ok: true, source: 'bridge', ...data }))
-      .catch(async (err) => {
-        // Offline fallback — bundled fixture (SHARED-only, mirrors the bridge).
-        try {
-          const fx = await fetch(
-            chrome.runtime.getURL('fixtures/get_context_response.json'),
-          ).then((r) => r.json());
-          sendResponse({ ok: true, source: 'fixture', note: String(err), ...fx });
-        } catch (e2) {
-          sendResponse({ ok: false, error: 'bridge + fixture both failed: ' + err });
-        }
-      });
+        return;
+      }
+      getBridgeConfig()
+        .then(({ url: base, token }) => {
+          const url =
+            base.replace(/\/$/, '') +
+            '/get_context?query=' +
+            encodeURIComponent(query) +
+            '&limit=6';
+          const opts = token ? { headers: { 'X-Contxt-Token': token } } : undefined;
+          return fetch(url, opts).then((r) => {
+            if (!r.ok) throw new Error('bridge HTTP ' + r.status);
+            return r.json();
+          });
+        })
+        .then((data) => sendResponse({ ok: true, source: 'bridge', ...data }))
+        .catch(async (err) => {
+          // Offline fallback — bundled fixture (SHARED-only, mirrors the bridge).
+          try {
+            const fx = await fetch(
+              chrome.runtime.getURL('fixtures/get_context_response.json'),
+            ).then((r) => r.json());
+            sendResponse({ ok: true, source: 'fixture', note: String(err), ...fx });
+          } catch (e2) {
+            sendResponse({ ok: false, error: 'bridge + fixture both failed: ' + err });
+          }
+        });
+    });
     return true; // async
   }
 

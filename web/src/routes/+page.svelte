@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { anyConnected } from '$lib/state.svelte';
+	import { base } from '$app/paths';
 
 	const connected = $derived(anyConnected());
 </script>
@@ -16,11 +17,11 @@
 	</p>
 	<div class="cta">
 		{#if connected}
-			<a class="btn btn-primary" href="/viewer">View your context →</a>
-			<a class="btn btn-secondary" href="/onboarding">Manage sources</a>
+			<a class="btn btn-primary" href="{base}/viewer">View your context →</a>
+			<a class="btn btn-secondary" href="{base}/onboarding">Manage sources</a>
 		{:else}
-			<a class="btn btn-primary" href="/onboarding">Connect a source →</a>
-			<a class="btn btn-secondary" href="/viewer">See the viewer</a>
+			<a class="btn btn-primary" href="{base}/onboarding">Connect a source →</a>
+			<a class="btn btn-secondary" href="{base}/viewer">See the viewer</a>
 		{/if}
 	</div>
 </section>

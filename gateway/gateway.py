@@ -58,7 +58,10 @@ def classify(item, private_keywords=None, policy=None, gemma=None) -> Decision:
     gemma:  optional callable(text) -> {"tier","sensitivity","categories","reason"}
             (cloud Gemma on Fireworks/AMD, or local Gemma via the extension).
     """
-    text = item.get("text", "")
+    # Coerce text to str so both passes (rules + the gemma callable) get a clean
+    # string. None → "" (not the literal "None"); other non-strings are stringified.
+    raw = item.get("text", "")
+    text = raw if isinstance(raw, str) else ("" if raw is None else str(raw))
 
     # UI privacy toggles → private_keywords (hard overrides). An explicit
     # private_keywords list still wins if a caller passes one directly.
@@ -75,12 +78,34 @@ def classify(item, private_keywords=None, policy=None, gemma=None) -> Decision:
         return Decision(Tier.SHARED, 0.0, [], "no rule hit; model not wired (stub)")
 
     out = gemma(text)
-    return Decision(
-        Tier(out.get("tier", "shared")),
-        float(out.get("sensitivity", 0.0)),
-        out.get("categories", []),
-        out.get("reason", ""),
-    )
+
+    # LLM output is untrusted: a 270M (or even a cloud) model can hallucinate a
+    # malformed shape or an unknown tier. Parse defensively. The tier IS the
+    # decision, so an unparseable/unknown tier fails SAFE to PRIVATE — a privacy
+    # gateway must never SHARE something it couldn't classify. Secondary fields
+    # (sensitivity/categories/reason) are tolerated field-by-field.
+    try:
+        if not isinstance(out, dict):
+            raise ValueError("model did not return a dict")
+        tier = Tier(out.get("tier", "shared"))
+    except (ValueError, AttributeError):
+        return Decision(
+            Tier.PRIVATE,
+            1.0,
+            ["unparseable-model-output"],
+            "model output malformed — defaulted PRIVATE (fail-safe)",
+        )
+
+    try:
+        sensitivity = max(0.0, min(1.0, float(out.get("sensitivity", 0.0))))
+    except (TypeError, ValueError):
+        sensitivity = 1.0 if tier is Tier.PRIVATE else 0.0
+
+    categories = out.get("categories") or []
+    if not isinstance(categories, list):
+        categories = [str(categories)]
+
+    return Decision(tier, sensitivity, categories, str(out.get("reason", "") or ""))
 
 
 if __name__ == "__main__":

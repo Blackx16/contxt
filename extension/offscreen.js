@@ -1,5 +1,5 @@
 /**
- * Crown-Jewels Gateway — on-device Gemma 3 270M Q4 classifier.
+ * Crown-Jewels Gateway — on-device Gemma 3 270M (fp16) classifier.
  *
  * Runs in the MV3 offscreen document (never the service worker / content
  * script) so it can use WebGPU and keep model weights off the main thread.
@@ -33,8 +33,8 @@ import { classifyFallback, ruleHits, DEFAULT_PRIVATE_KEYWORDS } from './rules.js
 
 // ── Lazy Transformers.js loader ───────────────────────────────────────────────
 
-// Gemma 3 270M Q4 ONNX model on Hugging Face.
-// Weights are ~270 MB on first load; subsequent loads are from Cache API.
+// Gemma 3 270M instruction-tuned ONNX model on Hugging Face.
+// The fp16 weights are ~570 MB on first load; subsequent loads are from Cache API.
 const MODEL_ID = 'onnx-community/gemma-3-270m-it-ONNX';
 
 let _tf = null;
@@ -59,8 +59,16 @@ async function getTransformers() {
 
 // ── Classifier state ──────────────────────────────────────────────────────────
 
-let _classifier = null;
+// A SHARED item triggers Pass 2, and several can arrive back-to-back (the popup
+// demo, the content script, a batch ingest). Caching only the *resolved*
+// classifier isn't enough: the ~570 MB WebGPU load is async, so N concurrent
+// callers would all sail past an `if (_classifier)` guard and each kick off its
+// own pipeline() before the first resolved. Cache the in-flight PROMISE instead
+// — every caller awaits the same load. Resolves to the pipeline, or to null when
+// WebGPU is unavailable.
+let _classifierPromise = null;
 let _webgpuReady = false;
+let _modelReady = false; // true once the pipeline has actually loaded
 
 async function detectWebGPU() {
   try {
@@ -72,33 +80,51 @@ async function detectWebGPU() {
   }
 }
 
-async function loadClassifier() {
-  if (_classifier) return _classifier;
+function loadClassifier(onProgress) {
+  // Concurrent callers share this one in-flight (or already-resolved) promise.
+  if (_classifierPromise) return _classifierPromise;
 
-  _webgpuReady = await detectWebGPU();
-  if (!_webgpuReady) {
-    console.info('[contxt] WebGPU unavailable — using deterministic fallback');
-    return null;
-  }
+  _classifierPromise = (async () => {
+    _webgpuReady = await detectWebGPU();
+    if (!_webgpuReady) {
+      console.info('[contxt] WebGPU unavailable — using deterministic fallback');
+      return null;
+    }
 
-  const { pipeline } = await getTransformers();
-  // Diagnostic: the only WebGPU wasm build transformers ships is threaded, which
-  // needs SharedArrayBuffer → needs cross-origin isolation. If this logs
-  // `crossOriginIsolated=false SharedArrayBuffer=undefined`, THAT is why the
-  // model aborts in an offscreen doc.
-  console.info(
-    '[contxt] env check — crossOriginIsolated=%s SharedArrayBuffer=%s webgpu=%s',
-    self.crossOriginIsolated,
-    typeof SharedArrayBuffer,
-    !!navigator.gpu,
-  );
-  console.info('[contxt] Loading Gemma 3 270M (Q4) via WebGPU…');
-  _classifier = await pipeline('text-generation', MODEL_ID, {
-    dtype: 'q4',
-    device: 'webgpu',
+    const { pipeline } = await getTransformers();
+    // Diagnostic: the only WebGPU wasm build transformers ships is threaded, which
+    // needs SharedArrayBuffer → needs cross-origin isolation. If this logs
+    // `crossOriginIsolated=false SharedArrayBuffer=undefined`, THAT is why the
+    // model aborts in an offscreen doc.
+    console.info(
+      '[contxt] env check — crossOriginIsolated=%s SharedArrayBuffer=%s webgpu=%s',
+      self.crossOriginIsolated,
+      typeof SharedArrayBuffer,
+      !!navigator.gpu,
+    );
+    console.info('[contxt] Loading Gemma 3 270M (fp16) via WebGPU…');
+    const clf = await pipeline('text-generation', MODEL_ID, {
+      // fp16, not q4: 4-bit quantization mangles a model this small on WebGPU
+      // (the repo maintainer's own example uses a non-4-bit dtype). fp16 is the
+      // quality/size sweet spot and WebGPU-native, so Pass 2 emits usable JSON
+      // instead of garbage that silently falls back to rules.
+      dtype: 'fp16',
+      device: 'webgpu',
+      // Streams file-download progress to the popup's download bar (first load
+      // only; weights come from the Cache API thereafter).
+      progress_callback: onProgress || undefined,
+    });
+    console.info('[contxt] Gemma 270M loaded ✓');
+    _modelReady = true;
+    return clf;
+  })().catch((err) => {
+    // A hard load failure (transient WebGPU/model-fetch error) shouldn't poison
+    // every future call — drop the cache so a later classify can retry.
+    _classifierPromise = null;
+    throw err;
   });
-  console.info('[contxt] Gemma 270M loaded ✓');
-  return _classifier;
+
+  return _classifierPromise;
 }
 
 // ── Prompt & JSON extraction ──────────────────────────────────────────────────
@@ -227,6 +253,44 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     .catch((err) => sendResponse({ ok: false, error: String(err) }));
 
   return true; // keep channel open for async sendResponse
+});
+
+// ── Model load + download progress (for the popup's consent/progress UI) ────────
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // Explicit "download the on-device model now" from the popup. Streams
+  // Transformers.js file-download progress back as { type:'model:progress' }.
+  if (msg?.type === 'model:load:offscreen') {
+    const broadcast = (p) => {
+      const pct =
+        p.status === 'progress'
+          ? p.progress ?? (p.total ? (p.loaded / p.total) * 100 : 0)
+          : undefined;
+      chrome.runtime
+        .sendMessage({ type: 'model:progress', status: p.status, file: p.file, progress: pct })
+        .catch(() => {}); // no receiver (popup closed) is fine
+    };
+    loadClassifier(broadcast)
+      .then((clf) => {
+        chrome.runtime
+          .sendMessage({ type: 'model:progress', status: clf ? 'ready' : 'unavailable' })
+          .catch(() => {});
+        sendResponse({ ok: true, ready: !!clf });
+      })
+      .catch((err) => {
+        chrome.runtime.sendMessage({ type: 'model:progress', status: 'unavailable' }).catch(() => {});
+        sendResponse({ ok: false, error: String(err) });
+      });
+    return true;
+  }
+
+  // Cheap status probe — does NOT trigger a load.
+  if (msg?.type === 'model:status') {
+    sendResponse({ ok: true, ready: _modelReady, webgpu: _webgpuReady });
+    return false;
+  }
+
+  return false;
 });
 
 // ── Dev/test hook ──────────────────────────────────────────────────────────────

@@ -64,6 +64,123 @@ def test_keywords_for_flattens_and_dedupes():
     assert policy.keywords_for(None) == []
 
 
+# ── 4. Core routing: rules → stub → model, and Tier canonicalization ───────────
+
+NEUTRAL_ITEM = {"text": "Contxt architecture notes", "source": "notion"}
+
+
+def _recording_gemma(out):
+    """Stand-in for the cloud/on-device Gemma callable that records its calls."""
+
+    def gemma(text):
+        gemma.calls.append(text)
+        return out
+
+    gemma.calls = []
+    return gemma
+
+
+def test_rule_hit_routes_private_with_metadata():
+    d = classify(LOAN_ITEM, private_keywords=[])
+    assert d.tier is Tier.PRIVATE
+    assert d.sensitivity == 1.0
+    assert "money" in d.categories
+    assert d.reason == "matched deterministic rule(s)"
+
+
+def test_no_rule_hit_without_model_is_shared_stub():
+    d = classify(NEUTRAL_ITEM, private_keywords=[])
+    assert d.tier is Tier.SHARED
+    assert d.sensitivity == 0.0
+    assert "stub" in d.reason
+
+
+def test_model_runs_only_when_no_rule_hit():
+    gemma = _recording_gemma({"tier": "shared", "sensitivity": 0.1})
+    # A rule hit short-circuits — the (costly) model must NOT be consulted.
+    classify(LOAN_ITEM, private_keywords=[], gemma=gemma)
+    assert gemma.calls == []
+    # No rule hit — the model IS consulted, with the item text.
+    classify(NEUTRAL_ITEM, private_keywords=[], gemma=gemma)
+    assert gemma.calls == [NEUTRAL_ITEM["text"]]
+
+
+def test_model_output_is_parsed_through():
+    gemma = _recording_gemma(
+        {"tier": "private", "sensitivity": 0.9, "categories": ["nuance"], "reason": "model said"}
+    )
+    d = classify(NEUTRAL_ITEM, private_keywords=[], gemma=gemma)
+    assert d.tier is Tier.PRIVATE  # the model can escalate a no-rule-hit item
+    assert d.sensitivity == 0.9
+    assert d.categories == ["nuance"]
+    assert d.reason == "model said"
+
+
+def test_model_uppercase_tier_is_canonicalized():
+    # Models emit "PRIVATE"/"SHARED"; Tier._missing_ must fold them to lowercase.
+    up = classify(NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({"tier": "PRIVATE"}))
+    assert up.tier is Tier.PRIVATE
+    down = classify(NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({"tier": "SHARED"}))
+    assert down.tier is Tier.SHARED
+
+
+# ── 5. Untrusted model output: malformed → fail SAFE to PRIVATE ────────────────
+
+def test_hallucinated_tier_fails_safe_to_private():
+    d = classify(NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({"tier": "maybe?"}))
+    assert d.tier is Tier.PRIVATE
+    assert "fail-safe" in d.reason
+
+
+def test_non_dict_model_output_fails_safe_to_private():
+    # A model that returns a bare string (not the {tier,...} contract) is malformed.
+    d = classify(NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma("SHARED"))
+    assert d.tier is Tier.PRIVATE
+
+
+def test_missing_tier_key_defaults_shared_not_failsafe():
+    # An empty-but-valid dict = "model gave no tier" → stays consistent with the
+    # no-rule-hit baseline (shareable); only *corrupt* output flips to PRIVATE.
+    d = classify(NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({}))
+    assert d.tier is Tier.SHARED
+
+
+def test_non_numeric_sensitivity_is_tolerated():
+    d = classify(
+        NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({"tier": "shared", "sensitivity": "high"})
+    )
+    assert d.tier is Tier.SHARED
+    assert d.sensitivity == 0.0  # unparseable sensitivity → baseline, not a crash
+
+
+def test_out_of_range_sensitivity_is_clamped():
+    d = classify(
+        NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({"tier": "private", "sensitivity": 5})
+    )
+    assert d.sensitivity == 1.0
+
+
+def test_non_list_categories_are_coerced():
+    d = classify(
+        NEUTRAL_ITEM, private_keywords=[], gemma=_recording_gemma({"tier": "shared", "categories": "finance"})
+    )
+    assert d.categories == ["finance"]
+
+
+# ── 6. Non-string / missing text must not crash the router (type hardening) ─────
+
+def test_non_string_text_does_not_crash():
+    assert classify({"text": 45000}, private_keywords=[]).tier is Tier.SHARED
+    assert classify({"text": None}, private_keywords=[]).tier is Tier.SHARED
+    assert classify({"source": "gmail"}, private_keywords=[]).tier is Tier.SHARED  # no "text"
+
+
+def test_non_string_text_still_reaches_guardrails():
+    # Coercion runs before the rules, so a stringified crown jewel is still caught.
+    d = classify({"text": ["call the client"]}, policy=["clients"])
+    assert d.tier is Tier.PRIVATE
+
+
 if __name__ == "__main__":
     import sys
 

@@ -37,9 +37,17 @@ python3 server/http_bridge.py            # → http://127.0.0.1:8787
 - Offline? The extension falls back to a bundled fixture, so it always injects.
 - Proof: `python3 server/verify_cha26.py` (boots the bridge, asserts zero private leakage).
 
+## Run as a container
+The server is containerized (serves the HTTP bridge in mock mode, so it runs with **no API keys**):
+```
+docker build -t contxt .
+docker run -p 8787:8787 contxt      # then: curl http://127.0.0.1:8787/health
+```
+The stdio MCP server (for Claude Desktop) is available via `docker run contxt python -m server.mcp_server`.
+
 ## Stack
 - Frontend: SvelteKit web app + browser extension
-- Local model: Gemma 3 270M (Q4) via Transformers.js + WebGPU (MV3 offscreen document); Ollama sidecar fallback
+- Local model: Gemma 3 270M (fp16) via Transformers.js + WebGPU (MV3 offscreen document); Ollama sidecar fallback
 - Cloud model: Gemma on Fireworks / AMD Dev Cloud
 - Encryption: Web Crypto API (AES-256-GCM + ECDH), QR key transfer for multi-device
 - Server: Python MCP server (stdio) + a local HTTP bridge so the browser can reach the same tools
