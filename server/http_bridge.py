@@ -41,9 +41,12 @@ Depends only on the Python stdlib. No Flask, no FastAPI, no extra install.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -58,6 +61,46 @@ try:  # store counts for /health — best-effort, never fatal
     from server.mcp_server import _get_store
 except Exception:  # pragma: no cover
     _get_store = None
+
+# ── Notion OAuth token exchange ─────────────────────────────────────────────
+# Notion's token endpoint authenticates with Basic base64(client_id:client_secret),
+# so the secret CANNOT live in the browser extension. The extension gets the auth
+# `code` via chrome.identity and POSTs it here; the bridge exchanges it. Env is
+# already loaded (server.mcp_server calls load_dotenv on import above).
+_NOTION_CLIENT_ID = os.getenv("NOTION_OAUTH_CLIENT_ID") or ""
+_NOTION_SECRET = os.getenv("NOTION_OAUTH_SECRET") or ""
+
+
+def _notion_token_exchange(code: str, redirect_uri: str) -> dict:
+    if not (_NOTION_CLIENT_ID and _NOTION_SECRET):
+        return {"error": "bridge is missing NOTION_OAUTH_CLIENT_ID / NOTION_OAUTH_SECRET"}
+    basic = base64.b64encode(f"{_NOTION_CLIENT_ID}:{_NOTION_SECRET}".encode()).decode()
+    payload = {"grant_type": "authorization_code", "code": code}
+    if redirect_uri:
+        payload["redirect_uri"] = redirect_uri
+    req = urllib.request.Request(
+        "https://api.notion.com/v1/oauth/token",
+        data=json.dumps(payload).encode(),
+        headers={
+            "Authorization": f"Basic {basic}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read().decode())
+    except urllib.error.HTTPError as exc:
+        return {"error": f"notion HTTP {exc.code}: {exc.read().decode()[:300]}"}
+    # Return only what the extension needs (never log the access token).
+    return {
+        "ok": True,
+        "access_token": data.get("access_token"),
+        "workspace_name": data.get("workspace_name"),
+        "workspace_id": data.get("workspace_id"),
+        "bot_id": data.get("bot_id"),
+    }
 
 DEFAULT_PORT = int(os.getenv("CONTXT_BRIDGE_PORT", "8787"))
 # Bind host. Defaults to loopback (safe on a dev machine — not reachable off-box);
@@ -172,6 +215,16 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 return self._json({"error": "missing 'email' field"}, 400)
             max_words = int(body.get("max_words", 150))
             return self._json(draft_reply_payload(email, max_words))
+
+        if route == "/notion/exchange":
+            if not self._authorized():
+                return self._json({"error": "unauthorized"}, 401)
+            code = str(body.get("code", "")).strip()
+            if not code:
+                return self._json({"error": "missing 'code' field"}, 400)
+            redirect_uri = str(body.get("redirect_uri", "")).strip()
+            result = _notion_token_exchange(code, redirect_uri)
+            return self._json(result, 200 if result.get("ok") else 502)
 
         return self._json({"error": f"unknown route {route}"}, 404)
 

@@ -68,6 +68,7 @@ async function getTransformers() {
 // WebGPU is unavailable.
 let _classifierPromise = null;
 let _webgpuReady = false;
+let _modelReady = false; // true once the pipeline has actually loaded
 
 async function detectWebGPU() {
   try {
@@ -79,7 +80,7 @@ async function detectWebGPU() {
   }
 }
 
-function loadClassifier() {
+function loadClassifier(onProgress) {
   // Concurrent callers share this one in-flight (or already-resolved) promise.
   if (_classifierPromise) return _classifierPromise;
 
@@ -109,8 +110,12 @@ function loadClassifier() {
       // instead of garbage that silently falls back to rules.
       dtype: 'fp16',
       device: 'webgpu',
+      // Streams file-download progress to the popup's download bar (first load
+      // only; weights come from the Cache API thereafter).
+      progress_callback: onProgress || undefined,
     });
     console.info('[contxt] Gemma 270M loaded ✓');
+    _modelReady = true;
     return clf;
   })().catch((err) => {
     // A hard load failure (transient WebGPU/model-fetch error) shouldn't poison
@@ -248,6 +253,44 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     .catch((err) => sendResponse({ ok: false, error: String(err) }));
 
   return true; // keep channel open for async sendResponse
+});
+
+// ── Model load + download progress (for the popup's consent/progress UI) ────────
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // Explicit "download the on-device model now" from the popup. Streams
+  // Transformers.js file-download progress back as { type:'model:progress' }.
+  if (msg?.type === 'model:load:offscreen') {
+    const broadcast = (p) => {
+      const pct =
+        p.status === 'progress'
+          ? p.progress ?? (p.total ? (p.loaded / p.total) * 100 : 0)
+          : undefined;
+      chrome.runtime
+        .sendMessage({ type: 'model:progress', status: p.status, file: p.file, progress: pct })
+        .catch(() => {}); // no receiver (popup closed) is fine
+    };
+    loadClassifier(broadcast)
+      .then((clf) => {
+        chrome.runtime
+          .sendMessage({ type: 'model:progress', status: clf ? 'ready' : 'unavailable' })
+          .catch(() => {});
+        sendResponse({ ok: true, ready: !!clf });
+      })
+      .catch((err) => {
+        chrome.runtime.sendMessage({ type: 'model:progress', status: 'unavailable' }).catch(() => {});
+        sendResponse({ ok: false, error: String(err) });
+      });
+    return true;
+  }
+
+  // Cheap status probe — does NOT trigger a load.
+  if (msg?.type === 'model:status') {
+    sendResponse({ ok: true, ready: _modelReady, webgpu: _webgpuReady });
+    return false;
+  }
+
+  return false;
 });
 
 // ── Dev/test hook ──────────────────────────────────────────────────────────────

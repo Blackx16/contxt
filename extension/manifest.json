@@ -3,11 +3,13 @@
   "name": "Contxt",
   "version": "0.1.0",
   "description": "Portable, privacy-first context layer for every AI.",
-  "permissions": ["storage", "offscreen"],
+  "permissions": ["storage", "offscreen", "identity"],
   "host_permissions": [
     "http://127.0.0.1/*",
     "http://localhost/*",
-    "https://api.fireworks.ai/*"
+    "https://api.fireworks.ai/*",
+    "https://www.googleapis.com/*",
+    "https://api.notion.com/*"
   ],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },
