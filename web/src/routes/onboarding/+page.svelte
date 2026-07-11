@@ -27,13 +27,13 @@
 			<div class="source-action">
 				{#if status === 'connected'}
 					<span class="done mono">Connected</span>
-					<button class="btn ghost" onclick={() => disconnectSource(s.id)}>Disconnect</button>
+					<button class="btn ghost" onclick={() => disconnectSource(s.id)} aria-label="Disconnect {s.label}">Disconnect</button>
 				{:else if status === 'connecting'}
-					<button class="btn" disabled>
+					<button class="btn" disabled aria-label="Connecting {s.label}">
 						<span class="spinner"></span> Ingesting…
 					</button>
 				{:else}
-					<button class="btn btn-primary" onclick={() => connectSource(s.id)}>Connect</button>
+					<button class="btn btn-primary" onclick={() => connectSource(s.id)} aria-label="Connect {s.label}">Connect</button>
 				{/if}
 			</div>
 		</div>
