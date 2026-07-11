@@ -101,6 +101,18 @@
       </div>
     </details>
 
+    <details id="bridgeSettings">
+      <summary>🔌 Local bridge (advanced)</summary>
+      <div class="settings">
+        <label for="bridge">Bridge URL (optional)</label>
+        <input id="bridge" placeholder="blank = http://127.0.0.1:8787" />
+        <div class="hint">Where get_context is served. A custom host prompts once for access.</div>
+        <label for="bridgeToken">Bridge token (optional)</label>
+        <input id="bridgeToken" type="password" placeholder="only if your bridge sets CONTXT_BRIDGE_TOKEN" />
+        <div class="hint">Sent as X-Contxt-Token. Saved locally (chrome.storage), never committed.</div>
+      </div>
+    </details>
+
     <script type="module" src="popup.js"></script>
   </body>
 </html>

@@ -61,7 +61,7 @@ flowchart LR
 
 ## Local model
 
-- Gemma 3 270M (Q4) via Transformers.js + WebGPU in MV3 offscreen document.
+- Gemma 3 270M (fp16) via Transformers.js + WebGPU in MV3 offscreen document.
 - Weights cached in OPFS. Fallback: Ollama sidecar.
 
 ## Cloud model

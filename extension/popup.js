@@ -20,6 +20,9 @@ const KEYS = {
   endpoint: 'cloudEndpoint',
   model: 'cloudModel',
   source: 'lastSource',
+  // Read by the background service worker's getBridgeConfig().
+  bridge: 'bridgeUrl',
+  bridgeToken: 'bridgeToken',
 };
 
 // last classification, so the Distill button knows tier/source/text
@@ -44,6 +47,37 @@ const setLocal = (obj) =>
 
 const parseToggles = (str) =>
   str.split(',').map((s) => s.trim()).filter(Boolean);
+
+// ── least-privilege host access ─────────────────────────────────────────────
+// The manifest ships with permission for the default hosts only (localhost
+// bridge + Fireworks) instead of <all_urls>. A user-pasted custom cloud endpoint
+// or bridge lives on an unknown origin, so we request just that origin on demand
+// — from a user gesture — against the manifest's optional_host_permissions.
+
+const originPattern = (url) => {
+  try {
+    const u = new URL(url);
+    // Match patterns can't carry a port, and the default bridge is on :8787 —
+    // so build a host-only pattern (it matches the host on any port), the same
+    // granularity the manifest's http://127.0.0.1/* default uses.
+    return `${u.protocol}//${u.hostname}/*`;
+  } catch {
+    return null; // not a URL yet; let the eventual fetch surface a real error
+  }
+};
+
+// Request host access for `url`'s origin. Safe to call from any user-gesture
+// handler; requesting an already-granted origin (e.g. the default Fireworks or
+// localhost host) resolves true silently with no prompt. Returns false on
+// deny/error.
+const ensureHostPermission = (url) => {
+  const pattern = originPattern(url);
+  if (!pattern) return Promise.resolve(true);
+  return chrome.permissions
+    .request({ origins: [pattern] })
+    .then((granted) => Boolean(granted))
+    .catch(() => false);
+};
 
 // ── rendering ─────────────────────────────────────────────────────────────────
 
@@ -118,6 +152,18 @@ async function classify() {
 async function runDistill() {
   if (!last) return;
   const btn = $('distillBtn');
+
+  // A custom endpoint sits on an origin we don't hold by default — secure host
+  // access now, while this click's user gesture is still active (required for
+  // chrome.permissions.request). The default Fireworks host is already granted.
+  const customEndpoint = $('endpoint').value.trim();
+  if (customEndpoint && !(await ensureHostPermission(customEndpoint))) {
+    $('distillOut').innerHTML = `<div class="card">Distill blocked: permission to reach ${
+      originPattern(customEndpoint) || customEndpoint
+    } was denied.</div>`;
+    return;
+  }
+
   btn.disabled = true;
   $('status').textContent = 'Distilling via cloud Gemma…';
 
@@ -155,8 +201,19 @@ for (const [el, key] of [
   ['apiKey', KEYS.apiKey],
   ['endpoint', KEYS.endpoint],
   ['model', KEYS.model],
+  ['bridge', KEYS.bridge],
+  ['bridgeToken', KEYS.bridgeToken],
 ]) {
-  $(el).addEventListener('change', () => setLocal({ [key]: $(el).value.trim() }));
+  $(el).addEventListener('change', () => {
+    const val = $(el).value.trim();
+    setLocal({ [key]: val });
+    // Secure host access to a custom cloud endpoint or bridge the moment it's
+    // set, from this change gesture. The bridge fetch runs in the background
+    // service worker, which has no user gesture and so can't prompt — this popup
+    // is the only place the grant can be requested. An already-granted origin
+    // (the default localhost/Fireworks hosts) is a silent no-op.
+    if ((el === 'endpoint' || el === 'bridge') && val) ensureHostPermission(val);
+  });
 }
 
 getLocal({
@@ -165,10 +222,14 @@ getLocal({
   [KEYS.endpoint]: '',
   [KEYS.model]: '',
   [KEYS.source]: 'notion',
+  [KEYS.bridge]: '',
+  [KEYS.bridgeToken]: '',
 }).then((s) => {
   $('toggles').value = (s[KEYS.toggles] || []).join(', ');
   $('apiKey').value = s[KEYS.apiKey] || '';
   $('endpoint').value = s[KEYS.endpoint] || '';
   $('model').value = s[KEYS.model] || '';
   $('source').value = s[KEYS.source] || 'notion';
+  $('bridge').value = s[KEYS.bridge] || '';
+  $('bridgeToken').value = s[KEYS.bridgeToken] || '';
 });

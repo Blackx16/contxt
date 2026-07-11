@@ -29,7 +29,7 @@
 - [ ] `CONTXT_MOCK_GEMMA=` unset and `FIREWORKS_API_KEY` set → real cloud Gemma (or `AMD_CLOUD_ENDPOINT` for the MI300X run).
 - [ ] `python3 server/http_bridge.py` running (so the badge is NOT "demo data").
 - [ ] Store seeded: `python3 server/verify_cha26.py` shows 2 shared / 2 private.
-- [ ] ⚠️ Test the on-device gateway output once — the `gemma-3-270m` ONNX/WebGPU q4f16 garbage bug. If the popup classifier emits junk, switch dtype to `fp32` or lean on the rules fallback for the recording.
+- [ ] ⚠️ Test the on-device gateway output once. dtype is now `fp16` (q4/q4f16 mangle a 270M model on WebGPU — the repo maintainer's own example avoids 4-bit). If the popup classifier still emits junk, fall back to `fp32` or lean on the deterministic rules for the recording.
 - [ ] A private item ready (e.g. the ICICI loan line) and the cloud SQLite open in a terminal.
 
 | Time | Show | Say (beat) |
@@ -44,6 +44,8 @@
 | 4:40–5:00 | Roadmap slide | "Today: web + extension. Next: fully local, mobile on-device Gemma 3n, Signal-grade sync. One context layer, every AI, your private data stays yours. That's Contxt." |
 
 **Recording tips:** 1440p, hide bookmarks/extra tabs, zoom the composer so the injected block + badge are both legible, keep the cursor deliberate on the badge during 1:35–2:40.
+
+**Least-privilege note:** the extension ships with no `<all_urls>` — default host access is the localhost bridge + Fireworks only, and any custom bridge/endpoint origin is requested on-demand from a user gesture (`optional_host_permissions`), so a privacy product never claims read/write on every site you visit.
 
 ---
 

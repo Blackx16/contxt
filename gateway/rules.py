@@ -41,8 +41,17 @@ def rule_hits(text, private_keywords=None):
     """
     if private_keywords is None:
         private_keywords = DEFAULT_PRIVATE_KEYWORDS
-    text = text or ""
-    hits = [name for name, pat in _PATTERNS.items() if pat.search(text)]
+    # Coerce to str: this is the can't-miss guardrail, so a non-string item
+    # (int, list, None from a malformed ingest) must degrade to "no text",
+    # never crash the regex engine on `.search()` / `.lower()`.
+    text = "" if text is None else str(text)
     lowered = text.lower()
-    hits += [f"kw:{kw}" for kw in private_keywords if kw in lowered]
+    hits = [name for name, pat in _PATTERNS.items() if pat.search(text)]
+    # Keyword hits are case-insensitive SUBSTRING matches (so "salary" also
+    # catches "salaried") — deliberately substring, not a set/word intersection,
+    # because this is the can't-miss safety floor and must over-match, not under-
+    # match. Normalizing each keyword to lower once here is what makes it truly
+    # case-insensitive: a mixed-case toggle like "Client" now fires too.
+    kws = [str(kw).lower() for kw in private_keywords]
+    hits += [f"kw:{kw}" for kw in kws if kw in lowered]
     return hits
