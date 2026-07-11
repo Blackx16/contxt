@@ -150,7 +150,18 @@ class BridgeHandler(BaseHTTPRequestHandler):
         # The MV3 background worker fetches with host_permissions and needs no
         # CORS at all; a random site gets no header and the browser blocks it.
         origin = self.headers.get("Origin")
+        is_allowed = False
         if origin and origin.startswith(_ALLOWED_ORIGIN_PREFIXES):
+            is_allowed = True
+            try:
+                parsed = urlparse(origin)
+                if parsed.scheme in ("http", "https"):
+                    if parsed.hostname not in ("localhost", "127.0.0.1"):
+                        is_allowed = False
+            except ValueError:
+                is_allowed = False
+
+        if is_allowed:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
