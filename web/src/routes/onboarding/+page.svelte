@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { SOURCES, conn, connectSource, disconnectSource, connectedSources } from '$lib/state.svelte';
 
 	const count = $derived(connectedSources().length);
@@ -42,7 +43,7 @@
 
 <div class="foot">
 	<span class="count mono">{count} of {SOURCES.length} connected</span>
-	<button class="btn btn-primary" disabled={count === 0} onclick={() => goto('/viewer')}>
+	<button class="btn btn-primary" disabled={count === 0} onclick={() => goto(`${base}/viewer`)}>
 		Continue to your context →
 	</button>
 </div>

@@ -2,6 +2,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
+	import { base } from '$app/paths';
 
 	let { children } = $props();
 
@@ -19,7 +20,7 @@
 
 <header class="site-header">
 	<div class="container bar">
-		<a class="brand" href="/">
+		<a class="brand" href="{base}/">
 			<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
 				<path d="M4 4 H28 V28 H4 Z M28 4 L4 28" fill="none" stroke="currentColor" stroke-width="2.4" />
 			</svg>
@@ -29,8 +30,8 @@
 			{#each nav as item (item.href)}
 				<a
 					class="nav-link"
-					class:active={page.url.pathname.startsWith(item.href)}
-					href={item.href}>{item.label}</a
+					class:active={page.url.pathname.startsWith(base + item.href)}
+					href="{base}{item.href}">{item.label}</a
 				>
 			{/each}
 		</nav>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import CardItem from '$lib/components/CardItem.svelte';
 	import PrivacyToggles from '$lib/components/PrivacyToggles.svelte';
 	import {
@@ -95,7 +96,7 @@
 		<code class="key-val mono">{getKeyForDisplay()}</code>
 		<p class="key-hint mono">
 			Set <strong>CONTXT_PRIVATE_KEY=</strong>&lt;above&gt; in .env, then restart the MCP server.
-			Moving to a second device? <a class="key-link" href="/multi-device">Transfer this key by QR →</a>
+			Moving to a second device? <a class="key-link" href="{base}/multi-device">Transfer this key by QR →</a>
 		</p>
 	</div>
 {/if}
@@ -111,7 +112,7 @@
 		</svg>
 		<h2>No context yet</h2>
 		<p>Connect a source and Contxt will ingest it, then show your distilled context cards here.</p>
-		<a class="btn btn-primary" href="/onboarding">Connect a source →</a>
+		<a class="btn btn-primary" href="{base}/onboarding">Connect a source →</a>
 	</div>
 {:else}
 	<div class="grid">
