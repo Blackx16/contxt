@@ -66,13 +66,6 @@ DEFAULT_PORT = int(os.getenv("CONTXT_BRIDGE_PORT", "8787"))
 # no CORS at all, so a random website that reaches 127.0.0.1 gets no
 # Access-Control-Allow-Origin header and the browser blocks it from reading the
 # body. Non-browser clients (curl) send no Origin and are unaffected.
-_ALLOWED_ORIGIN_PREFIXES = (
-    "chrome-extension://",
-    "moz-extension://",
-    "http://localhost",
-    "http://127.0.0.1",
-)
-
 # Optional shared secret. When CONTXT_BRIDGE_TOKEN is set, data routes require it
 # via the X-Contxt-Token header (or ?token=). Unset (default) → no token check;
 # the origin restriction above is the baseline guard.
@@ -91,7 +84,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
         # The MV3 background worker fetches with host_permissions and needs no
         # CORS at all; a random site gets no header and the browser blocks it.
         origin = self.headers.get("Origin")
-        if origin and origin.startswith(_ALLOWED_ORIGIN_PREFIXES):
+        is_allowed = False
+
+        if origin:
+            if origin.startswith(("chrome-extension://", "moz-extension://")):
+                is_allowed = True
+            else:
+                try:
+                    parsed = urlparse(origin)
+                    if parsed.scheme in ("http", "https") and parsed.hostname in ("localhost", "127.0.0.1"):
+                        is_allowed = True
+                except Exception:
+                    pass
+
+        if is_allowed:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
