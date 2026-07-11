@@ -32,13 +32,17 @@ export const DEFAULT_PRIVATE_KEYWORDS = [
  * @returns {string[]}
  */
 export function ruleHits(text, privateKeywords = DEFAULT_PRIVATE_KEYWORDS) {
+  const t = text == null ? '' : String(text);
   const hits = [];
   for (const [name, pat] of Object.entries(PATTERNS)) {
-    if (pat.test(text)) hits.push(name);
+    if (pat.test(t)) hits.push(name);
   }
-  const lower = (text || '').toLowerCase();
+  // Word-boundary match, not substring: "emi" must fire on the loan term but
+  // NOT inside "r-emi-nder" or "pr-emi-um". Still catches the keyword anywhere.
   for (const kw of privateKeywords) {
-    if (lower.includes(kw.toLowerCase())) hits.push(`kw:${kw}`);
+    const k = String(kw).toLowerCase();
+    const re = new RegExp('\\b' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if (re.test(t)) hits.push(`kw:${kw}`);
   }
   return hits;
 }

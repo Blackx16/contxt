@@ -45,13 +45,12 @@ def rule_hits(text, private_keywords=None):
     # (int, list, None from a malformed ingest) must degrade to "no text",
     # never crash the regex engine on `.search()` / `.lower()`.
     text = "" if text is None else str(text)
-    lowered = text.lower()
     hits = [name for name, pat in _PATTERNS.items() if pat.search(text)]
-    # Keyword hits are case-insensitive SUBSTRING matches (so "salary" also
-    # catches "salaried") — deliberately substring, not a set/word intersection,
-    # because this is the can't-miss safety floor and must over-match, not under-
-    # match. Normalizing each keyword to lower once here is what makes it truly
-    # case-insensitive: a mixed-case toggle like "Client" now fires too.
-    kws = [str(kw).lower() for kw in private_keywords]
-    hits += [f"kw:{kw}" for kw in kws if kw in lowered]
+    # Keyword hits are case-insensitive WORD-boundary matches, not substrings, so
+    # "emi" fires on the loan term but not inside "reminder"/"premium". Still
+    # catches the whole keyword anywhere in the text; mixed-case toggles work too.
+    for kw in private_keywords:
+        k = str(kw).lower()
+        if re.search(r"\b" + re.escape(k) + r"\b", text, re.I):
+            hits.append(f"kw:{k}")
     return hits

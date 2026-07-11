@@ -12,6 +12,8 @@
  * the auth code is POSTed to the bridge's /notion/exchange.
  */
 import { distillItem } from './distill.js';
+import { pullGmail, pullCalendar, pullNotion } from './pull.js';
+import { classifyFallback, DEFAULT_PRIVATE_KEYWORDS } from './rules.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -30,6 +32,7 @@ const KEYS = {
   googleEmail: 'googleEmail',
   notionConnected: 'notionConnected',
   notionWorkspace: 'notionWorkspace',
+  notionToken: 'notionAccessToken',
 };
 
 const GOOGLE_SCOPES = [
@@ -54,6 +57,7 @@ const getLocal = (d) => new Promise((r) => chrome.storage.local.get(d, r));
 const setLocal = (o) => new Promise((r) => chrome.storage.local.set(o, r));
 const parseToggles = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clip = (s, n = 160) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
 // ── least-privilege host access (endpoint / bridge / API origins) ────────────
 const originPattern = (url) => {
@@ -137,7 +141,19 @@ async function downloadModel() {
 }
 
 // ══ CONTEXT VIEW ═════════════════════════════════════════════════════════════
-const SRC_ICON = { gmail: '📧', calendar: '📅', notion: '📝' };
+// Inline brand marks (crisp at any DPI, no network, CSP-safe).
+const SRC_LOGO = {
+  gmail:
+    '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" fill="#fff"/><path fill="#EA4335" d="M4 6v12H3a1 1 0 0 1-1-1V6a2 2 0 0 1 .9-1.67L12 11l9.1-6.67A2 2 0 0 1 22 6v11a1 1 0 0 1-1 1h-1V6l-8 5.9L4 6Z"/></svg>',
+  calendar:
+    '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="#fff"/><path fill="#4285F4" d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2H3V7Z"/><rect x="6.5" y="2" width="2" height="5" rx="1" fill="#4285F4"/><rect x="15.5" y="2" width="2" height="5" rx="1" fill="#4285F4"/><text x="12" y="18" font-size="8" font-weight="700" fill="#4285F4" text-anchor="middle">31</text></svg>',
+  notion:
+    '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3" fill="#fff" stroke="#111" stroke-width="1"/><path fill="#111" d="M8 7.5h2.1l4 6.1V7.5H16v9h-2.1l-4-6.1v6.1H8v-9Z"/></svg>',
+};
+function srcBadge(source) {
+  const s = (source || 'notion').toLowerCase();
+  return `<span class="src">${SRC_LOGO[s] || ''}<span>${esc(s)}</span></span>`;
+}
 async function loadContext() {
   $('ctxList').innerHTML = '<div class="muted">Loading your context…</div>';
   try {
@@ -147,13 +163,11 @@ async function loadContext() {
     if (!cards.length) {
       $('ctxList').innerHTML = '<div class="muted">No shared context yet. Connect a source, then refresh.</div>';
     } else {
-      $('ctxList').innerHTML = cards.map((c) => {
-        const s = (c.source || 'notion').toLowerCase();
-        const ico = SRC_ICON[s] || '•';
-        return `<div class="ctx"><div class="top"><span class="src ${esc(s)}">${ico} ${esc(s)}</span>` +
-          `<span class="ttl">${esc(c.title)}</span></div>` +
-          `<div class="sum">${esc(c.summary || c.body || '')}</div></div>`;
-      }).join('');
+      $('ctxList').innerHTML = cards.map((c) =>
+        `<div class="ctx"><div class="top">${srcBadge(c.source)}` +
+        `<span class="ttl">${esc(c.title)}</span></div>` +
+        `<div class="sum">${esc(c.summary || c.body || '')}</div></div>`,
+      ).join('');
     }
     const priv = resp.private_total ?? resp.private_withheld ?? 0;
     const src = resp.source === 'fixture' ? ' <span class="muted">(offline demo data)</span>' : '';
@@ -162,6 +176,104 @@ async function loadContext() {
     $('ctxList').innerHTML = `<div class="muted">Bridge unavailable: ${esc(e.message || e)}</div>`;
     $('privLine').innerHTML = '';
   }
+}
+
+// Prefer LIVE context from the user's own accounts once connected; fall back to
+// the bridge (seeded/demo) when no token is present yet.
+async function smartLoad() {
+  const s = await getLocal({ [KEYS.googleToken]: '', [KEYS.notionToken]: '' });
+  if (s[KEYS.googleToken] || s[KEYS.notionToken]) return loadLiveContext(s[KEYS.googleToken], s[KEYS.notionToken]);
+  return loadContext();
+}
+
+function _srcErr(name, e) {
+  const m = String(e.message || e);
+  return m.includes('auth-expired') ? `${name}: session expired — reconnect` : `${name}: ${m}`;
+}
+
+async function loadLiveContext(gToken, nToken) {
+  $('ctxList').innerHTML = '<div class="muted">Pulling your live context…</div>';
+  $('privLine').innerHTML = '';
+  const { [KEYS.toggles]: toggles } = await getLocal({ [KEYS.toggles]: [] });
+  const kw = [...DEFAULT_PRIVATE_KEYWORDS, ...(toggles || [])];
+
+  const items = [];
+  const errors = [];
+  const tasks = [];
+  if (gToken) {
+    tasks.push(pullGmail(gToken).then((x) => items.push(...x)).catch((e) => errors.push(_srcErr('Gmail', e))));
+    tasks.push(pullCalendar(gToken).then((x) => items.push(...x)).catch((e) => errors.push(_srcErr('Calendar', e))));
+  }
+  if (nToken) {
+    tasks.push(pullNotion(nToken).then((x) => items.push(...x)).catch((e) => errors.push(_srcErr('Notion', e))));
+  }
+  await Promise.all(tasks);
+
+  // Dedupe near-identical items — EmailAgg/Firefox-Relay forwards produce both
+  // "Fwd: X" and "X". Key by source + title with the reply/forward prefix stripped.
+  const seen = new Set();
+  const deduped = [];
+  for (const it of items) {
+    const key = `${it.source}:${it.title.toLowerCase().replace(/^(fwd|fw|re):\s*/i, '').trim()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(it);
+  }
+
+  // On-device tiering (deterministic rules): the crown-jewels guardrail decides
+  // SHARED vs PRIVATE locally. PRIVATE items are shown here (on-device) but never
+  // sent to any AI/cloud; SHARED items are what may be injected.
+  const shared = [];
+  const privateItems = [];
+  for (const it of deduped) {
+    const d = classifyFallback(it.text, kw);
+    if (d.tier === 'PRIVATE') privateItems.push({ ...it, categories: d.categories });
+    else shared.push(it);
+  }
+
+  // Cache a CAPPED set of SHARED cards so the claude.ai injection serves THIS live
+  // context (one source of truth) and the cloud prompt stays tight. PRIVATE never cached.
+  await setLocal({
+    liveSharedCards: shared.slice(0, 6).map((c) => ({
+      tier: 'shared', source: c.source, title: c.title, summary: clip(c.text, 220),
+    })),
+    livePrivateCount: privateItems.length,
+    liveUpdatedAt: Date.now(),
+  });
+
+  renderLive(shared, privateItems, deduped.length, errors);
+}
+
+function renderLive(shared, privateItems, total, errors) {
+  if (!total && !errors.length) {
+    $('ctxList').innerHTML = '<div class="muted">No recent items found in your connected sources.</div>';
+  } else if (!shared.length && total) {
+    $('ctxList').innerHTML = `<div class="muted">All ${total} recent item(s) classified PRIVATE — kept on-device. Nothing shared.</div>`;
+  } else if (shared.length) {
+    $('ctxList').innerHTML = shared.map((c) =>
+      `<div class="ctx"><div class="top">${srcBadge(c.source)}` +
+      `<span class="ttl">${esc(c.title)}</span></div>` +
+      `<div class="sum">${esc(clip(c.text))}</div></div>`,
+    ).join('');
+  } else {
+    $('ctxList').innerHTML = '<div class="muted">Couldn\'t reach your sources — see below.</div>';
+  }
+
+  // The "kept on-device" section — visibility into what the gateway protected.
+  if (privateItems.length) {
+    $('privList').innerHTML = privateItems.map((c) =>
+      `<div class="ctx priv"><div class="top">${srcBadge(c.source)}` +
+      `<span class="ttl">${esc(c.title)}</span></div>` +
+      `<div class="sum">kept on-device · flagged: <span class="cats">${esc((c.categories || []).join(', ') || 'private')}</span></div></div>`,
+    ).join('');
+  } else if (total) {
+    $('privList').innerHTML = '<div class="muted">Nothing was classified private in this batch.</div>';
+  }
+
+  const errLine = errors.length ? ` <span class="muted">· ${esc(errors.join(' · '))}</span>` : '';
+  $('privLine').innerHTML =
+    `🔒 <b>${privateItems.length}</b> private item(s) kept on-device — never sent to any AI.` +
+    ` <span class="muted">· live from your accounts</span>${errLine}`;
 }
 
 // ══ OAUTH ════════════════════════════════════════════════════════════════════
@@ -197,7 +309,7 @@ async function connectGoogle() {
     }).then((r) => (r.ok ? r.json() : {}));
     await setLocal({ [KEYS.googleToken]: token, [KEYS.googleEmail]: info.email || '' });
     setStatusMsg('googleStatus', info.email ? 'Connected as ' + info.email : 'Connected', true);
-    loadContext();
+    smartLoad();
   } catch (e) {
     setStatusMsg('googleStatus', 'Connect failed: ' + (e.message || e), false);
   }
@@ -223,9 +335,13 @@ async function connectNotion() {
       body: JSON.stringify({ code, redirect_uri: REDIRECT() }),
     }).then((r) => r.json());
     if (res.error) throw new Error(res.error);
-    await setLocal({ [KEYS.notionConnected]: true, [KEYS.notionWorkspace]: res.workspace_name || '' });
+    await setLocal({
+      [KEYS.notionConnected]: true,
+      [KEYS.notionWorkspace]: res.workspace_name || '',
+      [KEYS.notionToken]: res.access_token || '',
+    });
     setStatusMsg('notionStatus', res.workspace_name ? 'Connected — ' + res.workspace_name : 'Connected', true);
-    loadContext();
+    smartLoad();
   } catch (e) {
     setStatusMsg('notionStatus', 'Connect failed: ' + (e.message || e), false);
   }
@@ -303,7 +419,7 @@ $('modeLocal').addEventListener('click', () => setMode('local'));
 $('modeOnline').addEventListener('click', () => setMode('online'));
 $('connectGoogle').addEventListener('click', connectGoogle);
 $('connectNotion').addEventListener('click', connectNotion);
-$('refresh').addEventListener('click', loadContext);
+$('refresh').addEventListener('click', smartLoad);
 $('go').addEventListener('click', classifyManual);
 
 for (const [el, key] of [
@@ -341,4 +457,4 @@ getLocal({
   if (s[KEYS.mode] === 'local') { listenForModelProgress(); ensureModelUI(); }
 });
 
-loadContext();
+smartLoad();
