@@ -44,6 +44,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -70,6 +71,16 @@ except Exception:  # pragma: no cover
 _NOTION_CLIENT_ID = os.getenv("NOTION_OAUTH_CLIENT_ID") or ""
 _NOTION_SECRET = os.getenv("NOTION_OAUTH_SECRET") or ""
 
+# macOS python.org builds ship no CA bundle, so urllib's HTTPS to Notion fails
+# with CERTIFICATE_VERIFY_FAILED. Use certifi's bundle when available; fall back
+# to the system default (Docker slim, Linux) otherwise.
+try:
+    import certifi
+
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:  # pragma: no cover
+    _SSL_CTX = ssl.create_default_context()
+
 
 def _notion_token_exchange(code: str, redirect_uri: str) -> dict:
     if not (_NOTION_CLIENT_ID and _NOTION_SECRET):
@@ -89,10 +100,12 @@ def _notion_token_exchange(code: str, redirect_uri: str) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as r:
             data = json.loads(r.read().decode())
     except urllib.error.HTTPError as exc:
         return {"error": f"notion HTTP {exc.code}: {exc.read().decode()[:300]}"}
+    except Exception as exc:  # URLError/SSL/timeout — return cleanly, never crash the handler
+        return {"error": f"notion exchange failed: {exc}"}
     # Return only what the extension needs (never log the access token).
     return {
         "ok": True,

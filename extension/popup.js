@@ -101,11 +101,20 @@ function renderModelProgress(p) {
       '<div class="muted">⚠️ WebGPU unavailable here — falling back to deterministic rules on-device (no model). Private items still stay local.</div>';
     return;
   }
-  const pct = Math.round((p.progress ?? 0));
-  const file = p.file ? esc(p.file.split('/').pop()) : 'model';
-  wrap.innerHTML =
-    `<div class="muted">Downloading on-device model — ${file} (${pct}%)</div>` +
-    `<div class="bar"><i style="width:${pct}%"></i></div>`;
+  const file = p.file ? esc(String(p.file).split('/').pop()) : 'model';
+  const hasPct = typeof p.progress === 'number' && p.progress > 0;
+  if (hasPct) {
+    const pct = Math.round(p.progress);
+    wrap.innerHTML =
+      `<div class="muted">Downloading on-device model — ${file} (${pct}%)</div>` +
+      `<div class="bar"><i style="width:${pct}%"></i></div>`;
+  } else {
+    // HF CDN sometimes omits content-length → no % available; show an
+    // indeterminate bar so the download step still reads as "working".
+    wrap.innerHTML =
+      `<div class="muted">Downloading on-device model — ${file}… (~570MB, one-time)</div>` +
+      `<div class="bar indet"><i></i></div>`;
+  }
 }
 async function ensureModelUI() {
   listenForModelProgress();
