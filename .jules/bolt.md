@@ -1,0 +1,3 @@
+## 2024-05-24 - Algorithmic fast-paths over stateful cache
+**Learning:** Adding a stateful cache like `WeakMap` in frontend code expecting immutable object references is prone to introducing stale data bugs when the frontend heavily relies on state mutating Proxies (like Svelte 5). Furthermore, attempting to optimize the V8 javascript engine for basic string concatenations often results in regression.
+**Action:** Instead of complex object caching, look for opportunities to apply stateless algorithmic optimizations (like early return statements) that avoid expensive operations (like regex compilation and match allocation) in backend loops for the vast majority of operations, achieving similar performance impact without staleness side effects.
