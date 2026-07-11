@@ -1,0 +1,28 @@
+node_modules
+
+# The repo-root .gitignore has a Python `lib/` rule; SvelteKit's src/lib is app
+# source (the $lib alias) and MUST be tracked. Re-include it here.
+!src/lib/
+!src/lib/**
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

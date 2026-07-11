@@ -1,0 +1,73 @@
+[
+  {
+    "id": "card_9f1c2a44-0001-4a10-8b21-000000000001",
+    "tier": "shared",
+    "source": "calendar",
+    "title": "Standup with Theerth — Contxt build",
+    "summary": "Daily 10:00 IST standup with Theerth K.R. to sync on the Contxt hackathon build ahead of the 2026-07-11 deadline.",
+    "body": "Recurring 15-min standup. Focus: Gateway classifier, MCP get_context, and the SvelteKit context viewer.",
+    "entities": [
+      { "type": "person", "value": "Theerth K.R." },
+      { "type": "date", "value": "2026-07-11" },
+      { "type": "org", "value": "Contxt" }
+    ],
+    "sensitivity_score": 0.05,
+    "created_at": "2026-07-09T04:30:00Z",
+    "embedding_ref": "vec:shared:00001",
+    "encryption": null,
+    "meta": { "event_id": "gcal_evt_abc123" }
+  },
+  {
+    "id": "card_9f1c2a44-0002-4a10-8b21-000000000002",
+    "tier": "shared",
+    "source": "notion",
+    "title": "Contxt architecture — two-tier model",
+    "summary": "Contxt is a portable, privacy-first context layer. Two tiers: PRIVATE (crown jewels, on-device Gemma, E2E encrypted, cloud is a blind relay) and SHARED (cloud Gemma, cloud-readable by any AI). The Crown-Jewels Gateway routes each item and is the trust boundary.",
+    "body": "Pipeline: Ingest (Gmail + Calendar + Notion) -> Gateway (on-device tier decision) -> Distill (local/cloud Gemma -> context cards) -> Store -> Serve over MCP (get_context / draft_reply) -> any AI.",
+    "entities": [
+      { "type": "org", "value": "Contxt" },
+      { "type": "misc", "value": "Crown-Jewels Gateway" },
+      { "type": "misc", "value": "MCP" }
+    ],
+    "sensitivity_score": 0.1,
+    "created_at": "2026-07-08T22:00:00Z",
+    "embedding_ref": "vec:shared:00002",
+    "encryption": null,
+    "meta": { "page_id": "notion_pg_arch_001" }
+  },
+  {
+    "id": "card_9f1c2a44-0003-4a10-8b21-000000000003",
+    "tier": "private",
+    "source": "gmail",
+    "title": "ICICI loan EMI due",
+    "summary": "ICICI Bank loan EMI of ₹14,200 due 2026-07-15. Account ending 4821. Auto-debit scheduled.",
+    "body": "Payment due: 2026-07-15. Amount: ₹14,200. Loan account: XXXX4821. Ensure sufficient balance in savings account before the debit date.",
+    "entities": [
+      { "type": "money", "value": "₹14,200" },
+      { "type": "date", "value": "2026-07-15" },
+      { "type": "org", "value": "ICICI Bank" }
+    ],
+    "sensitivity_score": 1.0,
+    "created_at": "2026-07-09T03:15:00Z",
+    "embedding_ref": null,
+    "encryption": null,
+    "meta": { "thread_id": "gmail_thr_icici_emi", "rule_hits": ["money", "account", "kw:loan", "kw:emi"] }
+  },
+  {
+    "id": "card_9f1c2a44-0004-4a10-8b21-000000000004",
+    "tier": "private",
+    "source": "gmail",
+    "title": "Doctor appointment — blood test report",
+    "summary": "Follow-up appointment on 2026-07-14 to review a blood test report. Health-sensitive; classified PRIVATE and kept on-device.",
+    "body": "Reminder from the clinic. Bring the previous prescription. Fasting sample required before 09:00.",
+    "entities": [
+      { "type": "date", "value": "2026-07-14" },
+      { "type": "misc", "value": "blood test report" }
+    ],
+    "sensitivity_score": 0.92,
+    "created_at": "2026-07-09T02:40:00Z",
+    "embedding_ref": "local:vec:00004",
+    "encryption": null,
+    "meta": { "thread_id": "gmail_thr_clinic_followup", "rule_hits": ["health", "kw:report"] }
+  }
+]

@@ -1,0 +1,209 @@
+/* Contxt — Neo-Kinpaku design system (adapted from Impeccable, pbakaus/impeccable).
+   Dark warm lacquer, kinpaku gold = PRIVATE (crown jewels), verdigris patina = SHARED.
+   OKLCH color, hairline borders, small radii, weight-inversion type, no glow/glass/gradient. */
+
+:root {
+	/* Surfaces — warm mineral lacquer, never pure black */
+	--lacquer: oklch(7% 0.006 95);
+	--lacquer-deep: oklch(4% 0.004 95);
+	--raised: oklch(11% 0.006 95);
+	--graphite: oklch(15% 0.008 95);
+	--graphite-2: oklch(19% 0.008 95);
+
+	/* Text — neutral, bright to faint (warmth lives in accents, not type) */
+	--champagne: oklch(91% 0 0);
+	--text: oklch(88% 0 0);
+	--text-muted: oklch(72% 0 0);
+	--text-faint: oklch(62% 0 0);
+	--text-disabled: oklch(52% 0 0);
+
+	/* Kinpaku gold — PRIVATE / crown jewels */
+	--gold: oklch(84% 0.19 80.46);
+	--gold-rich: oklch(77% 0.13 82);
+	--gold-pale: oklch(86% 0.07 84);
+	--gold-deep: oklch(61% 0.085 78);
+	--gold-soft: oklch(84% 0.19 80.46 / 0.1);
+
+	/* Verdigris patina — SHARED / cloud-readable */
+	--patina: oklch(70% 0.12 188);
+	--patina-pale: oklch(82% 0.07 188);
+	--patina-text: oklch(76% 0.088 190);
+	--patina-soft: oklch(70% 0.12 188 / 0.1);
+
+	/* Warning — used sparingly */
+	--vermilion: oklch(58% 0.15 35);
+
+	/* Rules — hairline first */
+	--rule: oklch(78% 0 0 / 0.14);
+	--rule-strong: oklch(74% 0.09 82 / 0.55);
+	--rule-patina: oklch(70% 0.105 190 / 0.5);
+
+	/* Radii — small, sharply bounded */
+	--r-xs: 2px;
+	--r-sm: 4px;
+	--r-md: 6px;
+	--r-lg: 8px;
+	--r-pill: 999px;
+
+	--font-display: 'Alumni Sans', 'Albert Sans', Arial, sans-serif;
+	--font-body: 'Albert Sans', 'Avenir Next', 'Helvetica Neue', Arial, system-ui, sans-serif;
+	--font-mono: 'SF Mono', SFMono-Regular, 'Roboto Mono', Consolas, monospace;
+
+	--ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--lacquer);
+	color: var(--text);
+	font-family: var(--font-body);
+	font-size: 16px;
+	line-height: 1.7;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+	min-height: 100vh;
+}
+
+/* Display face carries the brand at large sizes; weight-inversion h1<h2 */
+h1,
+h2 {
+	font-family: var(--font-display);
+	margin: 0;
+	color: var(--champagne);
+}
+h1 {
+	font-weight: 100;
+	font-size: clamp(3rem, 6.5vw, 5rem);
+	line-height: 1.02;
+	letter-spacing: -0.01em;
+}
+h2 {
+	font-weight: 300;
+	font-size: clamp(2rem, 4vw, 2.8rem);
+	line-height: 1.05;
+}
+h3 {
+	margin: 0;
+	font-family: var(--font-body);
+	font-weight: 500;
+	font-size: 1.15rem;
+	line-height: 1.35;
+	color: var(--champagne);
+}
+
+a {
+	color: var(--gold);
+	text-decoration: none;
+}
+a:hover {
+	color: var(--gold-pale);
+}
+
+.container {
+	max-width: 1080px;
+	margin: 0 auto;
+	padding: 0 32px;
+}
+
+/* Eyebrow / mono labels — tracked, short */
+.eyebrow {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	font-weight: 500;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.mono {
+	font-family: var(--font-mono);
+	letter-spacing: 0.02em;
+}
+
+/* Buttons — flat, small radius, quiet ease, no bounce */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 50px;
+	padding: 0 28px;
+	border-radius: var(--r-xs);
+	border: 1px solid var(--rule);
+	background: transparent;
+	color: var(--text);
+	font-family: var(--font-body);
+	font-weight: 500;
+	font-size: 0.98rem;
+	cursor: pointer;
+	transition:
+		transform 0.12s var(--ease),
+		background 0.15s var(--ease),
+		border-color 0.15s var(--ease),
+		color 0.15s var(--ease);
+}
+.btn:hover {
+	transform: translateY(-1px);
+	border-color: var(--rule-strong);
+}
+.btn:active {
+	transform: translateY(0);
+}
+.btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	transform: none;
+}
+.btn-primary {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: var(--lacquer-deep);
+	font-weight: 600;
+}
+.btn-primary:hover {
+	background: var(--gold-pale);
+	border-color: var(--gold-pale);
+	color: var(--lacquer-deep);
+}
+.btn-secondary {
+	color: var(--gold);
+	border-color: var(--rule-strong);
+}
+.btn-secondary:hover {
+	color: var(--gold-pale);
+}
+
+/* Tags — slim, mono, hairline-bounded. Gold = private, patina = shared */
+.tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 9px;
+	border-radius: var(--r-xs);
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	border: 1px solid transparent;
+}
+.tag-private {
+	color: var(--gold);
+	border-color: var(--rule-strong);
+	background: var(--gold-soft);
+}
+.tag-shared {
+	color: var(--patina-text);
+	border-color: var(--rule-patina);
+	background: var(--patina-soft);
+}
+
+:focus-visible {
+	outline: 2px solid var(--patina);
+	outline-offset: 3px;
+}

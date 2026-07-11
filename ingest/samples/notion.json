@@ -1,0 +1,16 @@
+[
+  {
+    "id": "397171f3-405e-813b-aa2a-f989a79a6275",
+    "title": "Contxt — Team Hub (AMD Hackathon ACT II)",
+    "url": "https://app.notion.com/p/397171f3405e813baa2af989a79a6275",
+    "last_edited": "2026-07-08T23:58:00Z",
+    "text": "One context layer every AI talks to — it remembers you and acts for you, and your private data stays yours. Contxt ingests your data, distills it into reusable context, serves it to any AI over MCP, and can act on your behalf. Two tiers: a PRIVATE tier (the crown jewels) distilled by a local Gemma and end-to-end encrypted, and a SHARED tier distilled by cloud Gemma that any AI can read directly. The Crown-Jewels Gateway runs on-device and routes each item private vs shared. Pipeline: Ingest (Gmail + Calendar + Notion) then Gateway then Distill then Store then Serve over MCP to any AI."
+  },
+  {
+    "id": "397171f3-405e-8198-b470-f93913ae2e53",
+    "title": "Context-Card Schema — the shared contract (CHA-15)",
+    "url": "https://app.notion.com/p/397171f3405e8198b470f93913ae2e53",
+    "last_edited": "2026-07-08T23:58:00Z",
+    "text": "The single data contract every Contxt piece builds against. A context card has id, tier, source, title, summary, body, entities, sensitivity_score, created_at, and embedding_ref. tier and source are lowercase enums (private/shared, gmail/calendar/notion). Parse, don't validate: the Gateway parses raw input once at the boundary and everything downstream trusts the shape."
+  }
+]

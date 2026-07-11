@@ -1,0 +1,13 @@
+mcp>=1.2.0
+pydantic>=2.0
+httpx>=0.27
+python-dotenv>=1.0
+
+# CHA-19: AES-256-GCM two-tier store (Apache-2.0, no AGPL contamination)
+cryptography>=42.0
+
+# Live ingest (CHA-16) — Gmail + Calendar read-only. Notion uses httpx (above).
+# Optional: the ingest step falls back to the offline sample dump without these.
+google-api-python-client>=2.100
+google-auth>=2.23
+google-auth-oauthlib>=1.1

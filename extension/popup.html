@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 13px/1.4 -apple-system, system-ui, sans-serif;
+        width: 360px;
+        margin: 0;
+        padding: 14px;
+      }
+      h1 { font-size: 14px; margin: 0 0 2px; }
+      .sub { color: #888; font-size: 11px; margin: 0 0 12px; }
+      label { display: block; font-weight: 600; margin: 10px 0 4px; }
+      textarea, input, select {
+        width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      textarea { resize: vertical; min-height: 52px; }
+      button {
+        margin-top: 10px;
+        width: 100%;
+        padding: 8px;
+        font: inherit;
+        font-weight: 600;
+        border: 0;
+        border-radius: 6px;
+        background: #4f46e5;
+        color: #fff;
+        cursor: pointer;
+      }
+      button.secondary { background: #0891b2; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #status { margin-top: 8px; font-size: 11px; color: #888; min-height: 14px; }
+      .card {
+        margin-top: 10px;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 10px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px; font-weight: 700;
+        padding: 2px 8px; border-radius: 999px; letter-spacing: 0.03em;
+      }
+      .PRIVATE { background: #fee2e2; color: #b91c1c; }
+      .SHARED { background: #dcfce7; color: #15803d; }
+      .row { margin-top: 8px; font-size: 12px; }
+      .k { color: #888; }
+      .cats { font-family: ui-monospace, monospace; font-size: 11px; }
+      .lock { margin-top: 10px; font-size: 12px; color: #b91c1c; }
+      details { margin-top: 12px; }
+      summary { cursor: pointer; font-weight: 600; font-size: 12px; color: #555; }
+      .settings { margin-top: 8px; }
+      pre {
+        margin: 6px 0 0; padding: 8px; background: #00000010;
+        border-radius: 6px; font-size: 10px; white-space: pre-wrap;
+        word-break: break-word; max-height: 180px; overflow: auto;
+      }
+      .hint { font-size: 10px; color: #999; margin-top: 2px; }
+    </style>
+  </head>
+  <body>
+    <h1>Contxt — Crown-Jewels Gateway</h1>
+    <p class="sub">On-device tiering → cloud Gemma distillation</p>
+
+    <label for="text">Item text</label>
+    <textarea id="text">Standup with Theerth at 10am to sync on the Contxt build</textarea>
+
+    <label for="source">Source</label>
+    <select id="source">
+      <option value="notion">notion</option>
+      <option value="calendar">calendar</option>
+      <option value="gmail">gmail</option>
+    </select>
+
+    <label for="toggles">Force-private keywords (comma-separated)</label>
+    <input id="toggles" placeholder="e.g. standup, financials" />
+
+    <button id="go">Classify (on-device)</button>
+    <div id="status"></div>
+    <div id="result"></div>
+    <div id="distill"></div>
+
+    <details id="cloudSettings">
+      <summary>☁️ Cloud Gemma settings (Fireworks / AMD)</summary>
+      <div class="settings">
+        <label for="apiKey">API key</label>
+        <input id="apiKey" type="password" placeholder="Fireworks or AMD Dev Cloud key" />
+        <label for="endpoint">Endpoint (optional)</label>
+        <input id="endpoint" placeholder="blank = Fireworks; set AMD URL for the prize" />
+        <div class="hint">e.g. https://api.amd.developer.cloud/v1/chat/completions</div>
+        <label for="model">Model (optional)</label>
+        <input id="model" placeholder="accounts/fireworks/models/gemma-4-31b-it" />
+        <div class="hint">Key/endpoint/model are saved locally (chrome.storage), never committed.</div>
+      </div>
+    </details>
+
+    <details id="bridgeSettings">
+      <summary>🔌 Local bridge (advanced)</summary>
+      <div class="settings">
+        <label for="bridge">Bridge URL (optional)</label>
+        <input id="bridge" placeholder="blank = http://127.0.0.1:8787" />
+        <div class="hint">Where get_context is served. A custom host prompts once for access.</div>
+        <label for="bridgeToken">Bridge token (optional)</label>
+        <input id="bridgeToken" type="password" placeholder="only if your bridge sets CONTXT_BRIDGE_TOKEN" />
+        <div class="hint">Sent as X-Contxt-Token. Saved locally (chrome.storage), never committed.</div>
+      </div>
+    </details>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
