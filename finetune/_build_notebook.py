@@ -56,8 +56,12 @@ model = AutoModelForCausalLM.from_pretrained(BASE, torch_dtype=torch.bfloat16,
 cfg = SFTConfig(
     output_dir="contxt-gw-270m", num_train_epochs=3, per_device_train_batch_size=16,
     gradient_accumulation_steps=1, learning_rate=5e-5, lr_scheduler_type="cosine",
-    warmup_ratio=0.03, max_length=512, bf16=True, logging_steps=10,
-    completion_only_loss=True,   # train on the JSON answer, not the repeated instruction
+    warmup_ratio=0.03, max_length=512, logging_steps=10,
+    bf16=torch.cuda.is_bf16_supported(), fp16=not torch.cuda.is_bf16_supported(),  # T4=fp16, A100/L4=bf16
+    # completion_only_loss=True triggers TRL's chunked-CE path, which is broken for Gemma3 on
+    # current TRL ('CausalLMOutputWithPast' has no 'last_hidden_state'). Full-sequence loss is
+    # fine for this tiny model with a fixed instruction, and it avoids the bug.
+    completion_only_loss=False,
     save_strategy="epoch", report_to="none",
 )
 SFTTrainer(model=model, processing_class=tok, train_dataset=train_ds, args=cfg).train()
