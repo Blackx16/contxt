@@ -48,10 +48,11 @@ cd web && npm install && npm run dev        # http://localhost:5173
 # Server / HTTP bridge (mock mode — no API keys needed)
 python3 server/http_bridge.py               # http://127.0.0.1:8787
 
-# Container (serves the bridge in mock mode)
-docker build -t contxt . && docker run -p 8787:8787 contxt
+# Container — pull the published image (GHCR, linux/amd64), or build locally
+docker run -p 8787:8787 ghcr.io/blackx16/contxt:latest      # → curl http://127.0.0.1:8787/health
+#   build instead: docker build -t contxt . && docker run -p 8787:8787 contxt
 ```
-For real cloud distillation, set `FIREWORKS_API_KEY` (AMD Dev Program) and `CONTXT_CLOUD_MODEL` in `.env` — see `.env.example`. The stdio MCP server (Claude Desktop) runs via `docker run contxt python -m server.mcp_server`.
+The published image serves the HTTP bridge in **mock mode** (no API keys). For real cloud distillation, set `FIREWORKS_API_KEY` (AMD Dev Program) and `CONTXT_CLOUD_MODEL` in `.env` — see `.env.example`. The stdio MCP server (Claude Desktop) runs via `docker run ghcr.io/blackx16/contxt python -m server.mcp_server`.
 
 ## Stack
 - **Web:** SvelteKit 2 + Svelte 5 (fully static, GitHub Pages)
