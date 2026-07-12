@@ -153,10 +153,10 @@ content(9, "Under the hood", "Small, portable, open.", [
     ("Cloud distill:", "gpt-oss-120B on Fireworks AI (SHARED tier → context cards + draft_reply)."),
     ("Stack:", "SvelteKit · MV3 extension · Python MCP server + HTTP bridge · Web Crypto · public Docker image (GHCR)."),
 ])
-content(10, "On-device model", "Fine-tuning Gemma for the privacy gateway.", [
-    ("Tiny + local.", "Gemma 3 270M runs entirely in the browser — no data leaves for tiering."),
-    ("Safety floor.", "Deterministic rules catch crown jewels even if the model is unsure."),
-    ("In progress.", "A fine-tuned Gemma 270M to sharpen PRIVATE-vs-SHARED decisions on-device."),
+content(10, "On-device model", "A fine-tuned Gemma gateway — trained, not theoretical.", [
+    ("Custom-tuned.", "Gemma 3 270M fine-tuned to emit the tier JSON, merged, exported to ONNX (q4f16, ~273 MB) and pushed to Hugging Face — runs fully in-browser."),
+    ("Real dataset + ship gate.", "1,438 train / 253 held-out rows (rules-oracle seed + synthetic hard cases); gated on PRIVATE-recall — safety-asymmetric by design."),
+    ("See the work.", "Training code, dataset & the single-source-of-truth prompt contract live in finetune/ — branch finetune/gemma-gateway-270m."),
 ])
 content(11, "Roadmap", "One context layer. Every AI. Your data stays yours.", [
     ("Today.", "Web + extension, live injection across Claude / ChatGPT / Gemini."),
