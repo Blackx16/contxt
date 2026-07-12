@@ -124,6 +124,7 @@
 					? () => handleDecrypt(card.id)
 					: undefined}
 				onLock={card.tier === 'private' ? () => lockCard(card.id) : undefined}
+				isDecrypting={decryptingId === card.id}
 			/>
 		{/each}
 	</div>

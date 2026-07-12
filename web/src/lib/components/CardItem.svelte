@@ -5,12 +5,14 @@
 		card,
 		onDecrypt,
 		onLock,
-		encryptedBlob = null
+		encryptedBlob = null,
+		isDecrypting = false
 	}: {
 		card: ContextCard;
 		onDecrypt?: () => void;
 		onLock?: () => void;
 		encryptedBlob?: { ciphertext: string; iv: string } | null;
+		isDecrypting?: boolean;
 	} = $props();
 
 	const isPrivate = $derived(card.tier === 'private');
@@ -62,8 +64,8 @@
 			<code class="cipher mono">{shortCipher(encryptedBlob.ciphertext)}</code>
 			<div class="cipher-meta mono">iv: {encryptedBlob.iv.slice(0, 16)}…</div>
 			{#if onDecrypt}
-				<button class="btn-decrypt" onclick={onDecrypt}>
-					Decrypt locally
+				<button class="btn-decrypt" onclick={onDecrypt} disabled={isDecrypting} aria-busy={isDecrypting}>
+					{isDecrypting ? 'Decrypting…' : 'Decrypt locally'}
 				</button>
 			{/if}
 		</div>
@@ -85,7 +87,7 @@
 		<div class="ondevice mono">
 			Decrypted locally — plaintext never left this device
 			{#if onLock}
-				<button class="btn-lock" onclick={onLock}>Lock</button>
+				<button class="btn-lock" onclick={onLock} aria-label="Lock {card.title}">Lock</button>
 			{/if}
 		</div>
 	{:else}
@@ -278,9 +280,13 @@
 			background 0.15s var(--ease),
 			border-color 0.15s var(--ease);
 	}
-	.btn-decrypt:hover {
+	.btn-decrypt:hover:not(:disabled) {
 		background: color-mix(in srgb, var(--gold) 15%, transparent);
 		border-color: var(--gold);
+	}
+	.btn-decrypt:disabled {
+		opacity: 0.6;
+		cursor: wait;
 	}
 	.card-foot {
 		display: flex;
