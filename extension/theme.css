@@ -1,0 +1,86 @@
+/* Contxt — shared Neo-Kinpaku design system (mirrors web/src/app.css).
+   Dark warm lacquer · kinpaku gold = PRIVATE · verdigris patina = SHARED.
+   Kept in sync with the web app so the extension popup and the site read as
+   one product. OKLCH + hairline rules + small radii, no glow/glass/gradient. */
+
+:root {
+  --lacquer: oklch(7% 0.006 95);
+  --lacquer-deep: oklch(4% 0.004 95);
+  --raised: oklch(11% 0.006 95);
+  --graphite: oklch(15% 0.008 95);
+  --graphite-2: oklch(19% 0.008 95);
+
+  --champagne: oklch(91% 0 0);
+  --text: oklch(88% 0 0);
+  --text-muted: oklch(72% 0 0);
+  --text-faint: oklch(62% 0 0);
+
+  --gold: oklch(84% 0.19 80.46);
+  --gold-rich: oklch(77% 0.13 82);
+  --gold-pale: oklch(86% 0.07 84);
+  --gold-soft: oklch(84% 0.19 80.46 / 0.1);
+
+  --patina: oklch(70% 0.12 188);
+  --patina-text: oklch(76% 0.088 190);
+  --patina-soft: oklch(70% 0.12 188 / 0.1);
+
+  --vermilion: oklch(58% 0.15 35);
+
+  --rule: oklch(78% 0 0 / 0.14);
+  --rule-strong: oklch(74% 0.09 82 / 0.55);
+  --rule-patina: oklch(70% 0.105 190 / 0.5);
+
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-pill: 999px;
+
+  /* Alumni/Albert Sans aren't bundled in the extension → system fallbacks; the
+     palette + layout carry the identity offline. */
+  --font-body: 'Albert Sans', 'Avenir Next', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --font-mono: 'SF Mono', SFMono-Regular, 'Roboto Mono', Consolas, monospace;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--lacquer);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Buttons — flat, hairline, quiet */
+button {
+  font-family: var(--font-body);
+  border-radius: var(--r-xs);
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), color 0.15s var(--ease);
+}
+button:hover { border-color: var(--rule-strong); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--gold); border-color: var(--gold); color: var(--lacquer-deep); font-weight: 600; }
+.btn-primary:hover { background: var(--gold-pale); border-color: var(--gold-pale); color: var(--lacquer-deep); }
+.ghost { background: transparent; border-color: var(--rule-strong); color: var(--gold); }
+.ghost:hover { color: var(--gold-pale); }
+.secondary { background: transparent; border-color: var(--rule-patina); color: var(--patina-text); }
+
+/* Tags — mono, hairline-bounded. Gold = private, patina = shared */
+.tag, .badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: var(--r-xs);
+  font-family: var(--font-mono); font-size: 0.64rem; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid transparent;
+}
+.tag-private, .badge.PRIVATE { color: var(--gold); border-color: var(--rule-strong); background: var(--gold-soft); }
+.tag-shared, .badge.SHARED { color: var(--patina-text); border-color: var(--rule-patina); background: var(--patina-soft); }
+
+.mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
