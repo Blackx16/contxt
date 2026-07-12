@@ -1,0 +1,4 @@
+## 2026-07-12 - Fix Overly Permissive CORS Configuration (startswith bypass)
+**Vulnerability:** The local HTTP bridge (`server/http_bridge.py`) used `.startswith("http://localhost")` to validate the `Origin` header for CORS. This allowed an attacker hosting a website at `http://localhost.evil.com` to bypass the CORS check, read SHARED context cards, and potentially access Notion API tokens via cross-origin requests.
+**Learning:** Using string matching like `.startswith()` for origin validation is a common vulnerability. Subdomains or similar-looking domains can easily bypass the check if the exact boundary (e.g., scheme and exact hostname) is not enforced.
+**Prevention:** Always use proper URL parsing (e.g., `urllib.parse.urlparse` in Python) to extract and strictly validate the `hostname` or `scheme`, rather than relying on string prefixes.
