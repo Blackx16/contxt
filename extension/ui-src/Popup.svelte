@@ -350,7 +350,7 @@
     <div class="settings">
       <label>API key<input type="password" bind:value={cfg.apiKey} onchange={() => persist(KEYS.apiKey, cfg.apiKey)} placeholder="Fireworks or AMD Dev Cloud key" /></label>
       <label>Endpoint (optional)<input bind:value={cfg.endpoint} onchange={() => persist(KEYS.endpoint, cfg.endpoint)} placeholder="blank = Fireworks; set AMD URL for the prize" /></label>
-      <label>Model (optional)<input bind:value={cfg.model} onchange={() => persist(KEYS.model, cfg.model)} placeholder="accounts/fireworks/models/gemma-4-31b-it" /></label>
+      <label>Model (optional)<input bind:value={cfg.model} onchange={() => persist(KEYS.model, cfg.model)} placeholder="accounts/fireworks/models/llama-v3p3-70b-instruct" /></label>
     </div>
   </details>
 

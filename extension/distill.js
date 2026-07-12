@@ -1,18 +1,18 @@
 /**
- * Cloud Gemma distillation — JS mirror of gateway/distill.py, for the popup.
+ * Cloud distillation — JS mirror of gateway/distill.py, for the popup.
  *
- * SHARED-tier items → rich context cards via cloud Gemma (Fireworks default,
- * or an AMD Dev Cloud endpoint). PRIVATE items are BLOCKED here — the same
- * belt-and-suspenders guard as the Python path, so a crown jewel can never be
- * sent to the cloud from the UI.
+ * SHARED-tier items → rich context cards via Llama 3.3 70B on Fireworks, which
+ * serves inference on AMD Instinct MI300X (FireAttention V3). PRIVATE items are
+ * BLOCKED here — the same belt-and-suspenders guard as the Python path, so a
+ * crown jewel can never be sent to the cloud from the UI.
  *
- * The console logs mirror the Python server (`contxt:cloud_gemma` /
- * `contxt:cloud_gemma_ok`) so the AMD-hosted inference is capturable for the
- * "Best AMD-Hosted Gemma Project" prize submission.
+ * The console logs mirror the Python server (`contxt:cloud_llm` /
+ * `contxt:cloud_llm_ok`) so the AMD-backed inference is capturable for the
+ * submission.
  */
 
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const DEFAULT_MODEL = 'accounts/fireworks/models/gemma-4-31b-it';
+const DEFAULT_MODEL = 'accounts/fireworks/models/llama-v3p3-70b-instruct';
 
 const VALID_SOURCES = ['gmail', 'calendar', 'notion'];
 const VALID_ENTITY_TYPES = [
@@ -128,7 +128,7 @@ export async function distillItem(text, opts = {}) {
     temperature: 0.1,
   };
 
-  console.info('[contxt] cloud_gemma endpoint=%s model=%s', url, chosenModel);
+  console.info('[contxt] cloud_llm endpoint=%s model=%s', url, chosenModel);
   const resp = await fetch(url, {
     method: 'POST',
     headers: {
@@ -144,7 +144,7 @@ export async function distillItem(text, opts = {}) {
   }
 
   const data = await resp.json();
-  console.info('[contxt] cloud_gemma_ok id=%s usage=%o', data.id, data.usage);
+  console.info('[contxt] cloud_llm_ok id=%s usage=%o', data.id, data.usage);
 
   const content = data?.choices?.[0]?.message?.content ?? '';
   const parsed = extractJSON(content);

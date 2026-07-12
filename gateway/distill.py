@@ -1,11 +1,12 @@
-"""Cloud Gemma distillation — SHARED-tier items → context cards.
+"""Cloud distillation — SHARED-tier items → context cards.
 
-Uses cloud Gemma 4 (gemma-4-31b-it) on Fireworks AI or an AMD Dev Cloud endpoint.
-PRIVATE-tier items are BLOCKED — they must never reach this function.
+Uses Llama 3.3 70B on Fireworks AI, which serves inference on AMD Instinct
+MI300X GPUs (FireAttention V3, AMD's clean-sheet kernel). PRIVATE-tier items are
+BLOCKED — they must never reach this function.
 
-Prize target: AMD Dev Cloud → "Best AMD-Hosted Gemma Project" ($2k).
-The `contxt:cloud_gemma` INFO log lines below capture the AMD-hosted inference
-for the submission — see docs/AMD_PRIZE.md for how to capture them.
+AMD compute: the Fireworks credits come from the AMD AI Developer Program and
+Fireworks runs Llama on AMD Instinct. The `contxt:cloud_llm` INFO log lines
+below capture that AMD-backed inference for the submission.
 
 Boundary contract (CHA-15): the raw model output is *parsed* into the frozen
 `schema.models.ContextCard` here — never trusted as-is. Illegal states (bad
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 _FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
 _DEFAULT_MODEL = os.getenv(
-    "GEMMA_CLOUD_MODEL", "accounts/fireworks/models/gemma-4-31b-it"
+    "CONTXT_CLOUD_MODEL", "accounts/fireworks/models/llama-v3p3-70b-instruct"
 )
 _AMD_ENDPOINT = os.getenv("AMD_CLOUD_ENDPOINT", "")
 
@@ -176,7 +177,7 @@ def _api_key() -> str:
     return key
 
 
-def _call_cloud_gemma(
+def _call_cloud_llm(
     system: str,
     user: str,
     *,
@@ -194,11 +195,11 @@ def _call_cloud_gemma(
 
     cached = _cache_get(key)
     if cached is not None:
-        logger.info("contxt:cloud_gemma_cache_hit key=%s", key[:12])
+        logger.info("contxt:cloud_llm_cache_hit key=%s", key[:12])
         return cached
 
     if _mock_enabled():
-        logger.info("contxt:cloud_gemma endpoint=mock model=%s mock=1", chosen_model)
+        logger.info("contxt:cloud_llm endpoint=mock model=%s mock=1", chosen_model)
         text = _mock_response(system, user)
         _cache_put(key, text)
         return text
@@ -217,12 +218,12 @@ def _call_cloud_gemma(
         "temperature": 0.1,
     }
 
-    logger.info("contxt:cloud_gemma endpoint=%s model=%s", endpoint, chosen_model)
+    logger.info("contxt:cloud_llm endpoint=%s model=%s", endpoint, chosen_model)
     resp = httpx.post(endpoint, json=payload, headers=headers, timeout=30)
     resp.raise_for_status()
     data = resp.json()
     logger.info(
-        "contxt:cloud_gemma_ok id=%s usage=%s",
+        "contxt:cloud_llm_ok id=%s usage=%s",
         data.get("id"),
         data.get("usage"),
     )
@@ -331,7 +332,7 @@ def distill_item(item: dict[str, Any]) -> dict[str, Any]:
 
     text = item.get("text", "")
     user_prompt = f"Source: {source}\n\nItem:\n{text[:2000]}"
-    raw = _call_cloud_gemma(_DISTILL_SYSTEM, user_prompt)
+    raw = _call_cloud_llm(_DISTILL_SYSTEM, user_prompt)
     card_data = _parse_model_json(raw, text)
     return _to_context_card(card_data, source, text)
 
@@ -366,7 +367,7 @@ def distill_draft(
         f"Email to reply to:\n{email}"
     )
     system = _DRAFT_SYSTEM.format(max_words=max_words)
-    return _call_cloud_gemma(system, user_prompt, max_tokens=400)
+    return _call_cloud_llm(system, user_prompt, max_tokens=400)
 
 
 # ── Smoke test / prize-capture helper ─────────────────────────────────────────
