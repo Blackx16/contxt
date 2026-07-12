@@ -235,3 +235,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# macOS + local archives (never commit)
+.DS_Store
+*.zip

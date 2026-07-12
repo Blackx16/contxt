@@ -1,10 +1,17 @@
-# `finetune/` — the fine-tuned gateway classifier track
+# `finetune/` — the fine-tuned gateway classifier
 
-Specializes **Gemma 3 270M** into the Crown-Jewels Gateway tier-classifier so it emits
-reliable JSON at ≤ ~270 MB and beats today's zero-shot base model. Full rationale,
-size math, and the WebGPU bug that motivates this: [`docs/FINETUNE_PLAN.md`](../docs/FINETUNE_PLAN.md).
+Two tracks, **one shared dataset**, A/B after the demo — pick the winner on the eval gate:
 
-Training runs on a **free Colab T4**; the result runs **fully on-device** (in-browser WASM).
+- **Generative (this dir):** specialize **Gemma 3 270M** to emit the tier JSON. Trains on a
+  free Colab T4, q4f16/WASM, 273 MB. Keeps the "local Gemma" narrative. Full rationale +
+  size math + WebGPU bug: [`docs/FINETUNE_PLAN.md`](../docs/FINETUNE_PLAN.md).
+- **Encoder ([`router/`](router/README.md)):** fine-tune a tiny BERT (DistilBERT-66M /
+  MiniLM-22M) as a PRIVATE/SHARED classifier — the org's AMD query-router shape. Trains on
+  your **M1 in ~5 min**, ~66 MB int8, `sensitivity = P(PRIVATE)`, no JSON/WebGPU failure
+  modes. Doesn't touch the AMD-hosted-Gemma cloud prize.
+
+Both read `finetune/dataset/{train,test}.jsonl`, so the comparison is fair. Sections below
+cover the generative track; the encoder track lives in [`router/`](router/README.md).
 
 ## The contract (don't drift it)
 `prompt.py` is the single source of truth for the instruction, the label shape, the
