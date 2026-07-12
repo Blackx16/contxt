@@ -1,12 +1,8 @@
 """Cloud distillation — SHARED-tier items → context cards.
 
-Uses Llama 3.3 70B on Fireworks AI, which serves inference on AMD Instinct
-MI300X GPUs (FireAttention V3, AMD's clean-sheet kernel). PRIVATE-tier items are
-BLOCKED — they must never reach this function.
-
-AMD compute: the Fireworks credits come from the AMD AI Developer Program and
-Fireworks runs Llama on AMD Instinct. The `contxt:cloud_llm` INFO log lines
-below capture that AMD-backed inference for the submission.
+Uses gpt-oss-120B on Fireworks AI (model set via CONTXT_CLOUD_MODEL). PRIVATE-tier
+items are BLOCKED — they must never reach this function. The `contxt:cloud_llm`
+INFO log lines below capture each cloud call (model + usage tokens) for the record.
 
 Boundary contract (CHA-15): the raw model output is *parsed* into the frozen
 `schema.models.ContextCard` here — never trusted as-is. Illegal states (bad
@@ -33,9 +29,11 @@ logger = logging.getLogger(__name__)
 
 _FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
 _DEFAULT_MODEL = os.getenv(
-    "CONTXT_CLOUD_MODEL", "accounts/fireworks/models/llama-v3p3-70b-instruct"
+    "CONTXT_CLOUD_MODEL", "accounts/fireworks/models/gpt-oss-120b"
 )
-_AMD_ENDPOINT = os.getenv("AMD_CLOUD_ENDPOINT", "")
+# Custom OpenAI-compatible endpoint override (falls back to Fireworks).
+# CONTXT_CLOUD_ENDPOINT is the current name; AMD_CLOUD_ENDPOINT kept for back-compat.
+_CLOUD_ENDPOINT = os.getenv("CONTXT_CLOUD_ENDPOINT") or os.getenv("AMD_CLOUD_ENDPOINT", "")
 
 # Closed enums from the frozen schema — used to coerce fuzzy model output.
 _VALID_SOURCES = {s.value for s in Source}
@@ -88,7 +86,7 @@ def _mock_enabled() -> bool:
 
     `CONTXT_MOCK_GEMMA=1` forces mock (used by tests + offline demo).
     `CONTXT_MOCK_GEMMA=0` forces the real call even with no key (will error).
-    Default: mock only when there is neither a Fireworks key nor an AMD endpoint,
+    Default: mock only when there is neither a Fireworks key nor a custom endpoint,
     so the pipeline degrades gracefully offline instead of crashing the demo.
     """
     flag = os.getenv("CONTXT_MOCK_GEMMA")
@@ -96,7 +94,7 @@ def _mock_enabled() -> bool:
         return True
     if flag == "0":
         return False
-    return not (os.getenv("FIREWORKS_API_KEY") or _AMD_ENDPOINT)
+    return not (os.getenv("FIREWORKS_API_KEY") or _CLOUD_ENDPOINT)
 
 
 def _mock_response(system: str, user: str) -> str:
@@ -184,12 +182,12 @@ def _call_cloud_llm(
     model: str | None = None,
     max_tokens: int = 512,
 ) -> str:
-    """POST to Fireworks (or AMD Dev Cloud) and return the assistant text.
+    """POST to the cloud LLM (Fireworks by default) and return the assistant text.
 
     Cache-first, then mock (offline), then the real HTTP call. The INFO log
-    line captures model ID + usage tokens for the AMD prize submission.
+    line captures model ID + usage tokens for the record.
     """
-    endpoint = _AMD_ENDPOINT or _FIREWORKS_URL
+    endpoint = _CLOUD_ENDPOINT or _FIREWORKS_URL
     chosen_model = model or _DEFAULT_MODEL
     key = _cache_key(system, user, chosen_model, max_tokens)
 

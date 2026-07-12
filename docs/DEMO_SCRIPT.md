@@ -5,7 +5,7 @@ The climax is the **live injection into Claude** — linger there. Everything el
 
 ## Pre-flight (before you hit record)
 - [ ] Extension loaded (`chrome://extensions` → Load unpacked → `extension/`), **Google + Notion connected**, **On-device** mode with the model already downloaded (so no wait on camera).
-- [ ] `.env` has `FIREWORKS_API_KEY` set so one real `cloud_llm` call can fire (for the AMD beat). If the key isn't ready, skip the log shot and keep the sourced claim on the slide/README.
+- [ ] `.env` has `FIREWORKS_API_KEY` set so one real `cloud_llm` call can fire (for the cloud beat). If the key isn't ready, skip the log shot and keep the sourced claim on the slide/README.
 - [ ] Live site open: **https://blackx16.github.io/contxt/** — one tab in **Live** mode, be ready to flip the top-right toggle.
 - [ ] A logged-in **claude.ai/new** tab.
 - [ ] DevTools console open on the offscreen doc / popup if you want to show the `contxt:cloud_llm` line.
@@ -21,7 +21,7 @@ The climax is the **live injection into Claude** — linger there. Everything el
 | 1:30–2:25 | **claude.ai/new** — page loads, context auto-injects into the composer, badge shows *N shared → this AI · P private kept on-device*. Ask Claude a real question that uses the context. | "The payoff. My extension just put my SHARED context into Claude automatically — and the badge shows the private cards it withheld. Claude answers me **with** my context… and it never saw the crown jewels. This works the same on ChatGPT and Gemini." *(linger)* |
 | 2:25–2:55 | Back to the live site, **Live** mode, `/viewer` → the SAME live cards + a green Google/Notion connection row. Toggle top-right **Demo ↔ Live**. | "And it's one product, not two. The website, in Live mode, reads the exact same context from the extension — in real time. Flip to Demo mode and anyone can explore it without installing anything." |
 | 2:55–3:25 | Site → **Devices** tab (Demo mode): Seal on A → relay shows ciphertext → QR → Decrypt on B | "Privacy, proven. A PRIVATE card is sealed on device A, relayed through the cloud as **ciphertext**, and decrypted on device B — but only after the key crosses by **QR**. The cloud never holds the key. Ciphertext alone is useless." |
-| 3:25–3:55 | Console/log: `contxt:cloud_llm endpoint=… model=llama-v3p3-70b-instruct usage=…` (+ the Fireworks/AMD source on a card) | "The SHARED tier is distilled by **Llama 3.3 70B on Fireworks — which serves on AMD Instinct MI300X** via FireAttention V3. The private tier runs on-device Gemma. AMD compute end to end." |
+| 3:25–3:55 | Console/log: `contxt:cloud_llm endpoint=… model=gpt-oss-120b usage=…` | "The SHARED tier is distilled by **gpt-oss-120B on Fireworks AI** — one real cloud call, logged. The PRIVATE tier runs entirely on-device on Gemma. Only SHARED context ever leaves." |
 | 3:55–4:10 | Roadmap card | "Today: web + extension across every AI. Next: fully local mobile Gemma, Signal-grade sync. One context layer, every AI — and your private data stays yours. That's Contxt." |
 
 ## Recording tips
@@ -31,5 +31,6 @@ The climax is the **live injection into Claude** — linger there. Everything el
 - Narrate in your own voice; the "Say" column is a guide, not a script to read verbatim.
 
 ## Notes
-- The **slide deck** (PPT) is on hold pending direct AMD-notebook GPU access; the AMD story here rests on the Fireworks→MI300X path, which is real and sourced in the README.
+- The **slide deck** lives at `docs/contxt-pitch.pptx` (`python3 docs/build_deck.py` to regenerate) — export to PDF for submission.
+- The cloud call is real: `gpt-oss-120B` on Fireworks AI, logged as `contxt:cloud_llm` / `contxt:cloud_llm_ok`. Only SHARED-tier items reach it; PRIVATE stays on-device.
 - Supersedes the earlier timed script in `SUBMISSION.md §2`.

@@ -194,7 +194,7 @@
   async function runDistill() {
     if (!last) return;
     if (cfg.endpoint && !(await ensureHostPermission(cfg.endpoint))) { distillOut = { error: 'permission to reach ' + (originPattern(cfg.endpoint) || cfg.endpoint) + ' denied' }; return; }
-    manualStatus = 'Distilling via cloud Gemma…';
+    manualStatus = 'Distilling via cloud LLM…';
     try {
       const card = await distillItem(last.text, { source: last.source, tier: last.tier, apiKey: cfg.apiKey, endpoint: cfg.endpoint || undefined, model: cfg.model || undefined });
       distillOut = { card }; manualStatus = 'Context card ready.';
@@ -329,9 +329,9 @@
             <div class="row"><span class="k">reason:</span> {manualResult.reason || '—'}</div>
           </div>
           {#if manualResult.tier === 'PRIVATE'}
-            <div class="row" style="color:var(--gold)">🔒 PRIVATE — kept on-device. Not sent to cloud Gemma.</div>
+            <div class="row" style="color:var(--gold)">🔒 PRIVATE — kept on-device. Not sent to the cloud.</div>
           {:else}
-            <button class="secondary" onclick={runDistill}>☁️ Distill to context card (cloud Gemma)</button>
+            <button class="secondary" onclick={runDistill}>☁️ Distill to context card (cloud LLM)</button>
           {/if}
         {/if}
       {/if}
@@ -348,11 +348,11 @@
   </details>
 
   <details>
-    <summary>☁️ Cloud Gemma settings (Fireworks / AMD)</summary>
+    <summary>☁️ Cloud LLM settings (Fireworks AI)</summary>
     <div class="settings">
-      <label>API key<input type="password" bind:value={cfg.apiKey} onchange={() => persist(KEYS.apiKey, cfg.apiKey)} placeholder="Fireworks or AMD Dev Cloud key" /></label>
-      <label>Endpoint (optional)<input bind:value={cfg.endpoint} onchange={() => persist(KEYS.endpoint, cfg.endpoint)} placeholder="blank = Fireworks; set AMD URL for the prize" /></label>
-      <label>Model (optional)<input bind:value={cfg.model} onchange={() => persist(KEYS.model, cfg.model)} placeholder="accounts/fireworks/models/llama-v3p3-70b-instruct" /></label>
+      <label>API key<input type="password" bind:value={cfg.apiKey} onchange={() => persist(KEYS.apiKey, cfg.apiKey)} placeholder="Fireworks API key" /></label>
+      <label>Endpoint (optional)<input bind:value={cfg.endpoint} onchange={() => persist(KEYS.endpoint, cfg.endpoint)} placeholder="blank = Fireworks; or a custom OpenAI-compatible URL" /></label>
+      <label>Model (optional)<input bind:value={cfg.model} onchange={() => persist(KEYS.model, cfg.model)} placeholder="accounts/fireworks/models/gpt-oss-120b" /></label>
     </div>
   </details>
 

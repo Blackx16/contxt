@@ -1,18 +1,16 @@
 /**
  * Cloud distillation — JS mirror of gateway/distill.py, for the popup.
  *
- * SHARED-tier items → rich context cards via Llama 3.3 70B on Fireworks, which
- * serves inference on AMD Instinct MI300X (FireAttention V3). PRIVATE items are
- * BLOCKED here — the same belt-and-suspenders guard as the Python path, so a
- * crown jewel can never be sent to the cloud from the UI.
+ * SHARED-tier items → rich context cards via gpt-oss-120B on Fireworks AI.
+ * PRIVATE items are BLOCKED here — the same belt-and-suspenders guard as the
+ * Python path, so a crown jewel can never be sent to the cloud from the UI.
  *
  * The console logs mirror the Python server (`contxt:cloud_llm` /
- * `contxt:cloud_llm_ok`) so the AMD-backed inference is capturable for the
- * submission.
+ * `contxt:cloud_llm_ok`) so each cloud call is capturable.
  */
 
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const DEFAULT_MODEL = 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+const DEFAULT_MODEL = 'accounts/fireworks/models/gpt-oss-120b';
 
 const VALID_SOURCES = ['gmail', 'calendar', 'notion'];
 const VALID_ENTITY_TYPES = [
@@ -91,7 +89,7 @@ function toContextCard(data, source, text) {
 // ── public API ────────────────────────────────────────────────────────────────
 
 /**
- * Distill a SHARED item into a context card via cloud Gemma.
+ * Distill a SHARED item into a context card via the cloud LLM.
  *
  * @param {string} text  the raw item text
  * @param {object} opts  { source, tier, apiKey, endpoint, model }
@@ -105,7 +103,7 @@ export async function distillItem(text, opts = {}) {
   if (String(tier).toUpperCase() === 'PRIVATE') {
     throw new Error(
       'Refusing to distill a PRIVATE item — it stays on-device and is never ' +
-        'sent to cloud Gemma.',
+        'sent to the cloud LLM.',
     );
   }
   if (!VALID_SOURCES.includes(source)) {
@@ -140,7 +138,7 @@ export async function distillItem(text, opts = {}) {
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => '');
-    throw new Error(`Cloud Gemma HTTP ${resp.status}: ${detail.slice(0, 200)}`);
+    throw new Error(`Cloud LLM HTTP ${resp.status}: ${detail.slice(0, 200)}`);
   }
 
   const data = await resp.json();

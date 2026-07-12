@@ -150,7 +150,7 @@ content(8, "One product", "A web dashboard that mirrors the extension.", [
 ], accent=PATINA)
 content(9, "Under the hood", "Small, portable, open.", [
     ("On-device:", "Gemma 3 270M via Transformers.js + WebGPU; deterministic-rules safety floor."),
-    ("Cloud distill:", "Llama 3.3 70B on Fireworks AI (served on AMD Instinct)."),
+    ("Cloud distill:", "gpt-oss-120B on Fireworks AI (SHARED tier → context cards + draft_reply)."),
     ("Stack:", "SvelteKit · MV3 extension · Python MCP server + HTTP bridge · Web Crypto · public Docker image (GHCR)."),
 ])
 content(10, "On-device model", "Fine-tuning Gemma for the privacy gateway.", [

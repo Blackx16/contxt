@@ -18,12 +18,11 @@ Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) grew a memory in 2026 — five
 - **SHARED:** distilled by a cloud LLM into reusable context cards any AI can read over MCP.
 - **Crown-Jewels Gateway:** the on-device router that sorts each item PRIVATE vs SHARED. It is the trust boundary — and the product.
 
-## AMD compute
-Contxt's SHARED-tier distillation and `draft_reply` run on **Llama 3.3 70B via Fireworks AI**, which serves inference on **AMD Instinct™ MI300X** GPUs using Fireworks' clean-sheet AMD kernel, **FireAttention V3**. The Fireworks credits are issued through the **AMD AI Developer Program**. The on-device PRIVATE tier runs **Gemma 3 270M** via WebGPU. Every cloud call logs `contxt:cloud_llm endpoint=… model=… usage=…` for capture (`gateway/distill.py`).
-- Sources: [Fireworks is powered by AMD](https://fireworks.ai/partners/amd) · [FireAttention V3 — MI300X, benchmarked on Llama 8B/70B](https://fireworks.ai/blog/fireattention-v3)
+## Cloud inference
+SHARED-tier distillation and `draft_reply` run on **gpt-oss-120B via Fireworks AI** (set with `CONTXT_CLOUD_MODEL`). The on-device PRIVATE tier runs **Gemma 3 270M** via WebGPU. Every cloud call logs `contxt:cloud_llm endpoint=… model=… usage=…` for capture (`gateway/distill.py`).
 
 ## Pipeline
-Ingest (Gmail + Calendar + Notion) → Gateway (on-device tier decision) → Distill (on-device Gemma for PRIVATE / cloud Llama for SHARED → context cards) → Store (E2E blind relay for PRIVATE; store for SHARED) → Serve over MCP (`get_context` / `draft_reply`) → any AI.
+Ingest (Gmail + Calendar + Notion) → Gateway (on-device tier decision) → Distill (on-device Gemma for PRIVATE / cloud gpt-oss-120B for SHARED → context cards) → Store (E2E blind relay for PRIVATE; store for SHARED) → Serve over MCP (`get_context` / `draft_reply`) → any AI.
 
 ## The browser extension
 Connect your sources, choose **On-device** (downloads Gemma 270M once via WebGPU) or **Online only**, and Contxt pulls your recent Gmail/Calendar/Notion, tiers each item **on-device**, and shows your SHARED context + a "🔒 N private kept on-device" count. On Claude/ChatGPT/Gemini it auto-injects your SHARED cards into the composer with a badge — *N shared → this AI · P private kept on-device*. Crown-jewel plaintext is never put on the wire.
@@ -52,13 +51,13 @@ python3 server/http_bridge.py               # http://127.0.0.1:8787
 docker run -p 8787:8787 ghcr.io/blackx16/contxt:latest      # → curl http://127.0.0.1:8787/health
 #   build instead: docker build -t contxt . && docker run -p 8787:8787 contxt
 ```
-The published image serves the HTTP bridge in **mock mode** (no API keys). For real cloud distillation, set `FIREWORKS_API_KEY` (AMD Dev Program) and `CONTXT_CLOUD_MODEL` in `.env` — see `.env.example`. The stdio MCP server (Claude Desktop) runs via `docker run ghcr.io/blackx16/contxt python -m server.mcp_server`.
+The published image serves the HTTP bridge in **mock mode** (no API keys). For real cloud distillation, set `FIREWORKS_API_KEY` and `CONTXT_CLOUD_MODEL` in `.env` — see `.env.example`. The stdio MCP server (Claude Desktop) runs via `docker run ghcr.io/blackx16/contxt python -m server.mcp_server`.
 
 ## Stack
 - **Web:** SvelteKit 2 + Svelte 5 (fully static, GitHub Pages)
 - **Extension:** MV3 — Svelte popup, offscreen WebGPU Gemma runtime, content-script injection + a site bridge
 - **On-device model:** Gemma 3 270M (fp16) via Transformers.js + WebGPU
-- **Cloud model:** Llama 3.3 70B on Fireworks → AMD Instinct MI300X
+- **Cloud model:** gpt-oss-120B on Fireworks AI
 - **Encryption:** Web Crypto API (AES-256-GCM + ECDH), QR key transfer
 - **Server:** Python MCP server (`get_context`, `draft_reply`) + local HTTP bridge + blind relay
 
