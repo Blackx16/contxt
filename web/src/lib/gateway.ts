@@ -107,6 +107,11 @@ const CATEGORY_KEYWORD_RE = new Map<PrivacyCategoryId, RegExp>(
 	])
 );
 
+// ⚡ Bolt: Cache cardText string concatenation results
+// Repeatedly combining title/summary/body/entities for the same card during UI updates
+// causes unnecessary allocation and CPU overhead. A WeakMap safely memoizes this without leaks.
+const cardTextCache = new WeakMap<object, string>();
+
 /** The text the gateway sees for an item: title + summary + body + entity values. */
 export function cardText(card: {
 	title?: string | null;
@@ -114,12 +119,17 @@ export function cardText(card: {
 	body?: string | null;
 	entities?: { value: string }[];
 }): string {
-	return [
+	if (cardTextCache.has(card)) return cardTextCache.get(card)!;
+
+	const text = [
 		card.title ?? '',
 		card.summary ?? '',
 		card.body ?? '',
 		...(card.entities ?? []).map((e) => e.value)
 	].join(' ');
+
+	cardTextCache.set(card, text);
+	return text;
 }
 
 /** Guardrail categories that fire on this text (always-on; mirrors rules.py). */

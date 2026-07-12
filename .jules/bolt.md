@@ -1,0 +1,3 @@
+## 2026-07-11 - Memoize cardText using WeakMap in Svelte frontend
+**Learning:** String concatenation for the same objects across multiple derived state calculations (e.g. `policyAffectedCount`, `overrideProtectedCount`, `loadCards`) causes large performance overhead. Since Svelte references the same `ContextCard` objects across renders/computations, we can safely cache operations on them.
+**Action:** Use `WeakMap` to securely cache computations derived from immutable (or static) object references without leaking memory. This avoids premature micro-optimizations while fixing the main thread bottlenecks.
