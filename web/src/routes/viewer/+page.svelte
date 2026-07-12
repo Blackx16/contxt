@@ -3,6 +3,7 @@
 	import { base } from '$app/paths';
 	import CardItem from '$lib/components/CardItem.svelte';
 	import PrivacyToggles from '$lib/components/PrivacyToggles.svelte';
+	import ExtensionPanel from '$lib/components/ExtensionPanel.svelte';
 	import {
 		loadCards,
 		connectedSources,
@@ -89,6 +90,8 @@
 		{/if}
 	</div>
 </section>
+
+<ExtensionPanel />
 
 {#if showKey && cryptoReady.value}
 	<div class="key-panel">

@@ -24,6 +24,15 @@
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://blackx16.github.io/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["site-connect.js"],
+      "run_at": "document_start"
     }
   ],
   "content_security_policy": {
