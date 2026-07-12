@@ -2,11 +2,14 @@
  * Talks to the (locally-loaded) Contxt browser extension.
  *
  * The extension injects a content script (site-connect.js) on this origin which
- * relays get:context from the background. We detect it by ping/pong over
- * window.postMessage — no extension ID needed, so it works for the unpacked/dev
- * extension that isn't on the Web Store.
+ * relays get:context (the FULL shared list + connection status) from the
+ * background and pushes fresh snapshots when the popup's state changes — so the
+ * site mirrors the extension in real time. Detection is ping/pong over
+ * window.postMessage, so no extension ID is needed (works for the unpacked
+ * dev extension).
  */
 type ExtCard = { source: string; title: string; summary?: string; body?: string };
+type Conns = { google: boolean; googleEmail: string; notion: boolean; notionWorkspace: string };
 
 export const ext = $state({
 	checked: false,
@@ -14,7 +17,8 @@ export const ext = $state({
 	loading: false,
 	cards: [] as ExtCard[],
 	privateTotal: 0,
-	source: '' as string
+	source: '' as string,
+	connections: { google: false, googleEmail: '', notion: false, notionWorkspace: '' } as Conns
 });
 
 const TAG_OUT = 'contxt-extension'; // extension → page
@@ -22,6 +26,19 @@ const TAG_IN = 'contxt-web'; // page → extension
 let seq = 0;
 const pending = new Map<number, (data: unknown) => void>();
 let listening = false;
+
+// Single place that applies a context snapshot — used for both request replies
+// and the extension's unsolicited real-time pushes (reqId 0).
+function applyContext(m: any) {
+	ext.present = true;
+	if (m.ok) {
+		ext.cards = m.cards || [];
+		ext.privateTotal = m.private_total || 0;
+		ext.source = m.contextSource || '';
+		if (m.connections) ext.connections = m.connections;
+	}
+	ext.loading = false;
+}
 
 function ensureListener() {
 	if (listening || typeof window === 'undefined') return;
@@ -31,6 +48,7 @@ function ensureListener() {
 		const m = e.data;
 		if (!m || m.source !== TAG_OUT) return;
 		if (m.type === 'present') ext.present = true;
+		if (m.type === 'context') applyContext(m);
 		if ((m.type === 'pong' || m.type === 'context') && m.reqId != null) {
 			const cb = pending.get(m.reqId);
 			if (cb) {
@@ -65,15 +83,9 @@ export async function detectExtension(): Promise<boolean> {
 	return ext.present;
 }
 
-/** Pull the SHARED context the extension exposes (live → bridge → fixture). */
+/** Pull the FULL shared context + connections (applyContext runs on the reply). */
 export async function loadExtensionContext(query = 'what am I working on') {
 	ext.loading = true;
-	const r = await call('get:context', { query }, 5000);
+	await call('get:context', { query }, 5000);
 	ext.loading = false;
-	if (r && r.ok) {
-		ext.cards = r.cards || [];
-		ext.privateTotal = r.private_total || 0;
-		ext.source = r.contextSource || '';
-	}
-	return r;
 }

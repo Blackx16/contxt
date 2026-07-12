@@ -18,6 +18,18 @@
 			<span class="dot live"></span> Extension connected
 			{#if ext.source}<span class="tag tag-shared">{ext.source}</span>{/if}
 		</p>
+		<div class="conns mono">
+			<span class="conn" class:on={ext.connections.google}
+				>{ext.connections.google
+					? '● Google · ' + (ext.connections.googleEmail || 'connected')
+					: '○ Google · not connected'}</span
+			>
+			<span class="conn" class:on={ext.connections.notion}
+				>{ext.connections.notion
+					? '● Notion · ' + (ext.connections.notionWorkspace || 'connected')
+					: '○ Notion · not connected'}</span
+			>
+		</div>
 		{#if ext.loading}
 			<p class="note mono">Pulling your live context…</p>
 		{:else if ext.cards.length}
@@ -87,6 +99,19 @@
 	}
 	.dot.live {
 		background: var(--patina);
+	}
+	.conns {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 20px;
+		margin: 10px 0 0;
+		font-size: 0.72rem;
+	}
+	.conn {
+		color: var(--text-faint);
+	}
+	.conn.on {
+		color: var(--patina-text);
 	}
 	.note {
 		margin: 10px 0 0;

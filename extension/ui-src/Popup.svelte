@@ -126,8 +126,10 @@
       if (d.tier === 'PRIVATE') pv.push({ source: it.source, title: it.title, categories: d.categories });
       else sh.push({ source: it.source, title: it.title, sum: clip(it.text) });
     }
+    const toCard = (c) => ({ tier: 'shared', source: c.source, title: c.title, summary: clip(c.sum, 220) });
     await setLocal({
-      liveSharedCards: sh.slice(0, 6).map((c) => ({ tier: 'shared', source: c.source, title: c.title, summary: clip(c.sum, 220) })),
+      liveSharedCards: sh.slice(0, 6).map(toCard),  // capped — tight cloud/AI injection
+      liveSharedCardsFull: sh.map(toCard),           // everything — the web dashboard shows all
       livePrivateCount: pv.length, liveUpdatedAt: Date.now()
     });
     shared = sh; priv = pv; privCount = pv.length; ctxErrors = errors;
@@ -364,6 +366,10 @@
       <label>Bridge token (optional)<input type="password" bind:value={cfg.bridgeToken} onchange={() => persist(KEYS.bridgeToken, cfg.bridgeToken)} placeholder="only if your bridge sets CONTXT_BRIDGE_TOKEN" /></label>
     </div>
   </details>
+
+  <a class="site-link" href="https://blackx16.github.io/contxt/viewer" target="_blank" rel="noreferrer">
+    ↗ Open your Contxt dashboard on the web
+  </a>
 </main>
 
 <style>
@@ -411,4 +417,6 @@
   pre { margin: 6px 0 0; padding: 9px; background: var(--lacquer-deep); border: 1px solid var(--rule); border-radius: var(--r-sm); font-size: 10px; white-space: pre-wrap; word-break: break-word; max-height: 160px; overflow: auto; color: var(--text-muted); }
   .hint { font-size: 10px; color: var(--text-faint); margin-top: 4px; }
   .status { min-height: 14px; margin-top: 8px; }
+  .site-link { display: block; text-align: center; margin-top: 14px; padding: 8px; border: 1px solid var(--rule); border-radius: var(--r-sm); color: var(--gold); font-size: 11px; text-decoration: none; }
+  .site-link:hover { border-color: var(--rule-strong); color: var(--gold-pale); background: var(--gold-soft); }
 </style>

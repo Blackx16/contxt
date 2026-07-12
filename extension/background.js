@@ -106,45 +106,67 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     //   1) LIVE cards the popup pulled from the user's own Gmail/Calendar/Notion
     //      (cached in storage). 2) the local bridge (seeded store). 3) the bundled
     //      offline fixture. PRIVATE cards are never in any of these payloads.
-    chrome.storage.local.get({ liveSharedCards: null, livePrivateCount: 0 }, (st) => {
-      if (Array.isArray(st.liveSharedCards) && st.liveSharedCards.length) {
-        sendResponse({
-          ok: true,
-          source: 'live',
-          query,
-          cards: st.liveSharedCards,
-          total: st.liveSharedCards.length,
-          private_withheld: st.livePrivateCount || 0,
-          private_total: st.livePrivateCount || 0,
-        });
-        return;
-      }
-      getBridgeConfig()
-        .then(({ url: base, token }) => {
-          const url =
-            base.replace(/\/$/, '') +
-            '/get_context?query=' +
-            encodeURIComponent(query) +
-            '&limit=6';
-          const opts = token ? { headers: { 'X-Contxt-Token': token } } : undefined;
-          return fetch(url, opts).then((r) => {
-            if (!r.ok) throw new Error('bridge HTTP ' + r.status);
-            return r.json();
+    // The web dashboard asks for everything (full: true); the claude.ai injection
+    // wants the capped list. Both also get the current connection status so the
+    // popup and site mirror each other.
+    const wantFull = msg.full === true;
+    chrome.storage.local.get(
+      {
+        liveSharedCards: null,
+        liveSharedCardsFull: null,
+        livePrivateCount: 0,
+        googleEmail: '',
+        notionConnected: false,
+        notionWorkspace: '',
+      },
+      (st) => {
+        const connections = {
+          google: !!st.googleEmail,
+          googleEmail: st.googleEmail || '',
+          notion: !!st.notionConnected,
+          notionWorkspace: st.notionWorkspace || '',
+        };
+        const live = wantFull ? st.liveSharedCardsFull || st.liveSharedCards : st.liveSharedCards;
+        if (Array.isArray(live) && live.length) {
+          sendResponse({
+            ok: true,
+            source: 'live',
+            query,
+            cards: live,
+            total: live.length,
+            private_withheld: st.livePrivateCount || 0,
+            private_total: st.livePrivateCount || 0,
+            connections,
           });
-        })
-        .then((data) => sendResponse({ ok: true, source: 'bridge', ...data }))
-        .catch(async (err) => {
-          // Offline fallback — bundled fixture (SHARED-only, mirrors the bridge).
-          try {
-            const fx = await fetch(
-              chrome.runtime.getURL('fixtures/get_context_response.json'),
-            ).then((r) => r.json());
-            sendResponse({ ok: true, source: 'fixture', note: String(err), ...fx });
-          } catch (e2) {
-            sendResponse({ ok: false, error: 'bridge + fixture both failed: ' + err });
-          }
-        });
-    });
+          return;
+        }
+        getBridgeConfig()
+          .then(({ url: base, token }) => {
+            const url =
+              base.replace(/\/$/, '') +
+              '/get_context?query=' +
+              encodeURIComponent(query) +
+              (wantFull ? '&limit=50' : '&limit=6');
+            const opts = token ? { headers: { 'X-Contxt-Token': token } } : undefined;
+            return fetch(url, opts).then((r) => {
+              if (!r.ok) throw new Error('bridge HTTP ' + r.status);
+              return r.json();
+            });
+          })
+          .then((data) => sendResponse({ ok: true, source: 'bridge', connections, ...data }))
+          .catch(async (err) => {
+            // Offline fallback — bundled fixture (SHARED-only, mirrors the bridge).
+            try {
+              const fx = await fetch(
+                chrome.runtime.getURL('fixtures/get_context_response.json'),
+              ).then((r) => r.json());
+              sendResponse({ ok: true, source: 'fixture', note: String(err), connections, ...fx });
+            } catch (e2) {
+              sendResponse({ ok: false, error: 'bridge + fixture both failed: ' + err, connections });
+            }
+          });
+      },
+    );
     return true; // async
   }
 
