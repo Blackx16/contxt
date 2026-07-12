@@ -13,7 +13,7 @@
   ],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_title": "Contxt", "default_popup": "popup.html" },
+  "action": { "default_title": "Contxt", "default_popup": "ui/popup.html" },
   "content_scripts": [
     {
       "matches": [
