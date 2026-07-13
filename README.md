@@ -4,7 +4,9 @@
 
 Portable, privacy-first context layer for every AI. Built for the **AMD Developer Hackathon ACT II** (Track 3 — Unicorn; on-device Gemma bonus).
 
-**▶ Live demo:** https://blackx16.github.io/contxt/ &nbsp;·&nbsp; **Repo:** https://github.com/Blackx16/contxt &nbsp;·&nbsp; **Model:** [🤗 chandr1601/contxt-gateway-270m-onnx](https://huggingface.co/chandr1601/contxt-gateway-270m-onnx)
+**▶ Live demo:** https://blackx16.github.io/contxt/ &nbsp;·&nbsp; 
+**Repo:** https://github.com/Blackx16/contxt &nbsp;·&nbsp; 
+**Model:** [chandr1601/contxt-gateway-270m-onnx](https://huggingface.co/chandr1601/contxt-gateway-270m-onnx)
 
 ## Why
 Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) grew a memory in 2026 — five walled gardens, none talk to each other, and you re-introduce yourself to each one. Every memory product (Mem0, Supermemory, Letta) is cloud-first and developer-facing. Contxt is the consumer piece nobody built: **portable across every AI, and privacy-first — your crown jewels never leave your device.**
