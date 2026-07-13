@@ -1,3 +1,0 @@
-## 2026-07-11 - Recurring ambiguity in loop-based action buttons
-**Learning:** In Svelte templates like the onboarding source list and viewer grid, action buttons inside `#each` loops ("Connect", "Disconnect", "Decrypt locally", "Lock") lack contextual identifiers for screen readers. Since visual context doesn't automatically translate to semantic context, a screen reader user will repeatedly hear ambiguous labels like "Connect, button" without knowing which card or source it pertains to.
-**Action:** Always provide an `aria-label` that includes the dynamic entity name (e.g., `aria-label="Connect {s.label}"` or `aria-label="Decrypt {card.title} locally"`) for buttons inside lists/grids.

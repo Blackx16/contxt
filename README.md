@@ -24,6 +24,12 @@ Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) grew a memory in 2026 — five
 - **SHARED:** distilled by a cloud LLM into reusable context cards any AI can read over MCP.
 - **Crown-Jewels Gateway:** the on-device router that sorts each item PRIVATE vs SHARED. It is the trust boundary — and the product.
 
+**Deeper docs**
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full two-tier data flow (Mermaid diagram) + the local-vs-cloud split at every stage.
+- [`docs/SCHEMA.md`](docs/SCHEMA.md) — the frozen context-card contract every piece builds against (`ContextCard`, `Entity`, `Tier`, `Source`; JSON Schema + TS + Python mirrors).
+- [`docs/amd_compute_capture.md`](docs/amd_compute_capture.md) — proof of AMD compute usage: MI300X fine-tune (ROCm 7.2, PyTorch 2.9), training log, `rocm-smi`, eval table.
+
 ## Cloud inference
 SHARED-tier distillation and `draft_reply` run on **gpt-oss-120B via Fireworks AI** (set with `CONTXT_CLOUD_MODEL`). The on-device PRIVATE tier runs **Gemma 3 270M** via WebGPU. Every cloud call logs `contxt:cloud_llm endpoint=… model=… usage=…` for capture (`gateway/distill.py`).
 
