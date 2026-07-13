@@ -57,6 +57,10 @@
   const setLocal = (o) => new Promise((r) => chrome.storage.local.set(o, r));
   const parseToggles = (str) => str.split(',').map((x) => x.trim()).filter(Boolean);
   const clip = (str, n = 160) => { str = String(str || ''); return str.length > n ? str.slice(0, n - 1) + '…' : str; };
+  // Context view tabs: 'all' (private-first, then shared) · 'shared' · 'private'
+  let ctxTab = $state('all');
+  const TAB_BASE = 'padding:5px 12px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#9a9892;border-radius:8px;font:inherit;font-size:12px;cursor:pointer;';
+  const TAB_ON = 'background:var(--gold);color:#0E0E10;border-color:var(--gold);';
   const originPattern = (url) => { try { const u = new URL(url); return `${u.protocol}//${u.hostname}/*`; } catch { return null; } };
   const ensureHostPermission = (url) => { const p = originPattern(url); if (!p) return Promise.resolve(true); return chrome.permissions.request({ origins: [p] }).then(Boolean).catch(() => false); };
   const REDIRECT = () => chrome.identity.getRedirectURL();
@@ -229,7 +233,13 @@
 </script>
 
 <main>
-  <h1>CONTXT</h1>
+  <div style="display:flex;align-items:center;gap:9px;">
+    <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true" style="flex:none">
+      <rect x="1" y="1" width="30" height="30" rx="7" fill="#0E0E10" stroke="var(--gold)" stroke-opacity="0.3" stroke-width="1" />
+      <path d="M20 6 H6 V26 H26 V20 M26 6 L6 26" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+    <h1 style="margin:0">CONTXT</h1>
+  </div>
   <p class="sub">Your private context, in every AI — crown jewels stay on-device.</p>
 
   <!-- ① Sources + ② Mode -->
@@ -280,32 +290,47 @@
     {/if}
   </div>
 
-  <!-- Context -->
+  <!-- Context — 3 tabs: Your Context (private-first) / Shared / Private -->
   <div class="panel">
     <div class="hd">Your context <button class="ghost sm push" onclick={smartLoad}>↻ Refresh</button></div>
-    {#if shared.length}
-      {#each shared as c (c.source + c.title)}
-        <div class="ctx"><div class="top"><span class="src">{@html SRC_LOGO[c.source] || ''}<span>{c.source}</span></span><span class="ttl">{c.title}</span></div>{#if c.sum}<div class="sum">{c.sum}</div>{/if}</div>
-      {/each}
-    {:else}
+    <div style="display:flex;gap:6px;margin:2px 0 12px;">
+      <button style={TAB_BASE + (ctxTab === 'all' ? TAB_ON : '')} onclick={() => (ctxTab = 'all')}>Your Context</button>
+      <button style={TAB_BASE + (ctxTab === 'shared' ? TAB_ON : '')} onclick={() => (ctxTab = 'shared')}>Shared</button>
+      <button style={TAB_BASE + (ctxTab === 'private' ? TAB_ON : '')} onclick={() => (ctxTab = 'private')}>Private</button>
+    </div>
+
+    <!-- ① Private on-device (shown first in Your Context, and in Private) -->
+    {#if ctxTab !== 'shared'}
+      {#if priv.length}
+        {#if ctxTab === 'all'}<div class="hd" style="font-size:12px;opacity:.85;margin-top:0;">🔒 Kept on-device — detected & stored by the model</div>{/if}
+        {#each priv as c (c.source + c.title)}
+          <div class="ctx priv"><div class="top"><span class="src">{@html SRC_LOGO[c.source] || ''}<span>{c.source}</span></span><span class="ttl">{c.title}</span></div><div class="sum">kept on-device · flagged: <span class="cats">{(c.categories || []).join(', ') || 'private'}</span></div></div>
+        {/each}
+      {:else if ctxTab === 'private'}
+        <div class="muted">Nothing classified private yet.</div>
+      {/if}
+    {/if}
+
+    <!-- ② Shared (usable by any AI) -->
+    {#if ctxTab !== 'private'}
+      {#if shared.length}
+        {#if ctxTab === 'all' && priv.length}<div class="hd" style="font-size:12px;opacity:.85;margin-top:14px;">☁️ Shared — usable by any AI</div>{/if}
+        {#each shared as c (c.source + c.title)}
+          <div class="ctx"><div class="top"><span class="src">{@html SRC_LOGO[c.source] || ''}<span>{c.source}</span></span><span class="ttl">{c.title}</span></div>{#if c.sum}<div class="sum">{c.sum}</div>{/if}</div>
+        {/each}
+      {:else if ctxTab === 'shared'}
+        <div class="muted">{ctxMsg || 'No shared context yet.'}</div>
+      {/if}
+    {/if}
+
+    {#if ctxTab === 'all' && !shared.length && !priv.length}
       <div class="muted">{ctxMsg}</div>
     {/if}
+
     {#if privCount || ctxSource}
       <div class="privline">🔒 <b>{privCount}</b> private item(s) kept on-device — never sent to any AI.{#if ctxSource === 'live'} <span class="muted">· live from your accounts</span>{:else if ctxSource === 'fixture'} <span class="muted">· offline demo data</span>{/if}{#if ctxErrors.length} <span class="muted">· {ctxErrors.join(' · ')}</span>{/if}</div>
     {/if}
-  </div>
-
-  <!-- Private (on-device) -->
-  <div class="panel">
-    <div class="hd">🔒 Kept on-device (private)</div>
-    {#if priv.length}
-      {#each priv as c (c.source + c.title)}
-        <div class="ctx priv"><div class="top"><span class="src">{@html SRC_LOGO[c.source] || ''}<span>{c.source}</span></span><span class="ttl">{c.title}</span></div><div class="sum">kept on-device · flagged: <span class="cats">{(c.categories || []).join(', ') || 'private'}</span></div></div>
-      {/each}
-    {:else}
-      <div class="muted">Nothing classified private yet.</div>
-    {/if}
-    <div class="hint">These never leave your device — not sent to any AI, not to the cloud.</div>
+    <div class="hint">Private items never leave your device — not sent to any AI, not to the cloud.</div>
   </div>
 
   <!-- Manual (advanced) -->

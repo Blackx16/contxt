@@ -127,8 +127,8 @@
 				{/each}
 			</div>
 
-			<div class="cards">
-				{#if showShared}
+			{#if showShared && ext.cards.length}
+				<div class="cards">
 					{#each ext.cards as c (c.source + c.title)}
 						<div class="card">
 							<div class="c-top">
@@ -138,28 +138,25 @@
 							{#if c.summary || c.body}<p class="c-sum">{c.summary || c.body}</p>{/if}
 						</div>
 					{/each}
-				{/if}
-				{#if showPrivate}
-					{#each ext.privateCards as c (c.source + c.title)}
-						<div class="card private">
-							<div class="c-top">
-								<span class="tag tag-private">{c.source}</span>
-								<span class="c-title">{c.title}</span>
-							</div>
-							{#if c.reason}<p class="held mono">⚠ {c.reason}</p>{/if}
-							<div class="blob">
-								<p class="blob-head mono">🔒 {c.blob?.alg || 'AES-256-GCM'} · held on-device</p>
-								{#if c.blob?.ct}<code class="cipher mono">{c.blob.ct.slice(0, 88)}…</code>{/if}
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-			{#if showPrivate && ext.privateCards.length}
-				<p class="note mono">
-					🔒 {privateCount} private item{privateCount === 1 ? '' : 's'} kept on-device — the cloud only
-					ever holds the sealed blob, and the key never leaves your extension.
-				</p>
+				</div>
+			{/if}
+
+			{#if showShared && !ext.cards.length && filter === 'shared'}
+				<p class="note mono">No shared context yet — connect a source in the extension and refresh.</p>
+			{/if}
+
+			{#if showPrivate && privateCount}
+				<div class="masked">
+					<p class="masked-head mono">
+						🔒 {privateCount} private item{privateCount === 1 ? '' : 's'} detected & kept in your Contxt
+						extension
+					</p>
+					<p class="masked-sub">
+						The on-device model flagged {privateCount === 1 ? 'this' : 'these'} as crown jewels. The
+						content is masked — it stays in your Contxt extension and is never shown on the web or sent
+						to any AI.
+					</p>
+				</div>
 			{/if}
 		{:else}
 			<p class="note mono">
@@ -436,10 +433,10 @@
 		background: var(--graphite);
 		border: 1px solid var(--rule);
 		border-radius: var(--r-md);
-		padding: 11px 13px;
-	}
-	.card.private {
-		border-color: color-mix(in srgb, var(--gold) 30%, var(--rule));
+		padding: 12px 13px;
+		display: flex;
+		flex-direction: column;
+		min-height: 108px;
 	}
 	.c-top {
 		display: flex;
@@ -450,37 +447,38 @@
 		font-weight: 500;
 		font-size: 0.9rem;
 		color: var(--champagne);
+		line-height: 1.35;
 	}
 	.c-sum {
-		margin: 6px 0 0;
+		margin: 7px 0 0;
 		color: var(--text-faint);
 		font-size: 0.78rem;
 		line-height: 1.5;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		overflow: hidden;
 	}
-	.held {
-		margin: 8px 0 6px;
-		color: var(--gold);
-		font-size: 0.68rem;
-		line-height: 1.4;
-	}
-	.blob {
+	.masked {
+		margin-top: 14px;
 		background: var(--lacquer-deep);
-		border: 1px solid var(--rule);
-		border-radius: var(--r-sm);
-		padding: 8px 10px;
+		border: 1px solid color-mix(in srgb, var(--gold) 26%, var(--rule));
+		border-radius: var(--r-md);
+		padding: 16px 18px;
 	}
-	.blob-head {
-		margin: 0 0 5px;
+	.masked-head {
+		margin: 0;
 		color: var(--gold);
-		font-size: 0.64rem;
-		letter-spacing: 0.04em;
+		font-size: 0.8rem;
+		letter-spacing: 0.02em;
 	}
-	.cipher {
-		display: block;
-		word-break: break-all;
-		color: var(--text-faint);
-		font-size: 0.66rem;
-		line-height: 1.4;
+	.masked-sub {
+		margin: 8px 0 0;
+		color: var(--text-muted);
+		font-size: 0.8rem;
+		line-height: 1.6;
+		max-width: 64ch;
 	}
 	.note :global(em),
 	.head .tag {

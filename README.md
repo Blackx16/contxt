@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/cover.png" alt="Contxt — one private context layer for every AI" width="100%" />
+</p>
+
 # Contxt
 
 > One context layer every AI talks to — it remembers you, acts for you, and your private data stays yours.

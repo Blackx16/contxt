@@ -23,7 +23,8 @@
 	<div class="container bar">
 		<a class="brand" href="{base}/">
 			<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-				<path d="M4 4 H28 V28 H4 Z M28 4 L4 28" fill="none" stroke="currentColor" stroke-width="2.4" />
+				<path d="M20 6 H6 V26 H26 V20 M26 6 L6 26" fill="none" stroke="currentColor"
+					stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
 			</svg>
 			<span class="wordmark">CONTXT</span>
 		</a>

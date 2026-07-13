@@ -188,7 +188,7 @@ async function computeLiveSnapshot(wantFull) {
   const activeIds = LIVE_CATEGORIES.map((c) => c.id).filter((id) => policy[id]);
 
   const shared = [];
-  const priv = [];
+  let privCount = 0;
   let heldTotal = 0;
   const categoryCounts = Object.fromEntries(LIVE_CATEGORIES.map((c) => [c.id, 0]));
 
@@ -199,15 +199,10 @@ async function computeLiveSnapshot(wantFull) {
     if (d.tier === 'shared') {
       shared.push({ tier: 'shared', source: it.source, title: it.title, summary: _clip(it.summary || it.text) });
     } else {
+      // PRIVATE items are NEVER sent to the site — only a count + which rules held
+      // them (via categoryCounts). Their titles/bodies stay in the extension.
+      privCount += 1;
       if (d.forced) heldTotal += 1;
-      priv.push({
-        source: it.source,
-        title: it.title,
-        heldBy: d.labels,
-        reason: d.reason,
-        forced: d.forced,
-        blob: await sealText(_clip(it.text || it.summary || '', 400)),
-      });
     }
   }
 
@@ -215,9 +210,9 @@ async function computeLiveSnapshot(wantFull) {
   return {
     shared: sharedOut,
     cards: sharedOut, // back-compat name
-    privateCards: wantFull ? priv : [],
-    private_total: priv.length,
-    private_withheld: priv.length,
+    privateCards: [], // never expose private card content to the web page
+    private_total: privCount,
+    private_withheld: privCount,
     heldTotal,
     total: shared.length,
     policy,
