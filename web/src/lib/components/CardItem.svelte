@@ -62,7 +62,7 @@
 			<code class="cipher mono">{shortCipher(encryptedBlob.ciphertext)}</code>
 			<div class="cipher-meta mono">iv: {encryptedBlob.iv.slice(0, 16)}…</div>
 			{#if onDecrypt}
-				<button class="btn-decrypt" onclick={onDecrypt}>
+				<button class="btn-decrypt" onclick={onDecrypt} aria-label="Decrypt {card.title} locally">
 					Decrypt locally
 				</button>
 			{/if}
@@ -85,7 +85,7 @@
 		<div class="ondevice mono">
 			Decrypted locally — plaintext never left this device
 			{#if onLock}
-				<button class="btn-lock" onclick={onLock}>Lock</button>
+				<button class="btn-lock" onclick={onLock} aria-label="Lock {card.title}">Lock</button>
 			{/if}
 		</div>
 	{:else}
