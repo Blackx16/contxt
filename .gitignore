@@ -229,3 +229,4 @@ __marimo__/
 
 .DS_Store
 extension/ui-src/node_modules/
+extension/local-config.js
