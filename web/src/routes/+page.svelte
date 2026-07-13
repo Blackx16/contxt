@@ -30,7 +30,7 @@
 	<div class="tier">
 		<span class="tag tag-shared">Shared</span>
 		<h3>Cloud-readable</h3>
-		<p>Distilled by cloud Gemma, lightly encrypted. Any AI can use it directly through MCP.</p>
+		<p>Distilled by a cloud LLM, lightly encrypted. Any AI can use it directly through MCP.</p>
 	</div>
 	<div class="seam" aria-hidden="true"></div>
 	<div class="tier">

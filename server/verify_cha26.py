@@ -89,6 +89,8 @@ def main() -> int:
 
         assert _acao("https://evil.example") is None, \
             "SHARED context is readable cross-origin by an arbitrary website!"
+        assert _acao("http://localhost.evil.com") is None, \
+            "SHARED context is readable cross-origin by a spoofed localhost prefix domain!"
         assert (_acao("chrome-extension://abc123") or "").startswith("chrome-extension://"), \
             "the extension origin should be allowed to read the bridge"
         print("2b. CORS locked to extension/localhost origins — no blanket '*' ✓")

@@ -207,3 +207,26 @@ a:hover {
 	outline: 2px solid var(--patina);
 	outline-offset: 3px;
 }
+
+/* Scrollbar — a hint, not a slab. Thin, transparent track, faint thumb that
+   catches a little gold on hover. */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--rule) transparent;
+}
+::-webkit-scrollbar {
+	width: 9px;
+	height: 9px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--rule);
+	border-radius: var(--r-pill);
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--rule-strong);
+}

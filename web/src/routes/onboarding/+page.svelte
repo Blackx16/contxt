@@ -2,10 +2,22 @@
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { SOURCES, conn, connectSource, disconnectSource, connectedSources } from '$lib/state.svelte';
+	import { demo } from '$lib/demo.svelte';
+	import { ext, detectExtension, loadExtensionContext } from '$lib/extension.svelte';
 
 	const count = $derived(connectedSources().length);
+
+	// Live mode: reflect the extension's real connection state, not the sim.
+	let probed = false;
+	$effect(() => {
+		if (!demo.on && !probed) {
+			probed = true;
+			detectExtension().then((p) => p && loadExtensionContext());
+		}
+	});
 </script>
 
+{#if demo.on}
 <section class="head">
 	<span class="step eyebrow">Step 1 of 2 · Connect sources</span>
 	<h1>Bring your context in.</h1>
@@ -28,13 +40,13 @@
 			<div class="source-action">
 				{#if status === 'connected'}
 					<span class="done mono">Connected</span>
-					<button class="btn ghost" onclick={() => disconnectSource(s.id)}>Disconnect</button>
+					<button class="btn ghost" onclick={() => disconnectSource(s.id)} aria-label="Disconnect {s.label}">Disconnect</button>
 				{:else if status === 'connecting'}
-					<button class="btn" disabled>
+					<button class="btn" disabled aria-label="Connecting {s.label}">
 						<span class="spinner"></span> Ingesting…
 					</button>
 				{:else}
-					<button class="btn btn-primary" onclick={() => connectSource(s.id)}>Connect</button>
+					<button class="btn btn-primary" onclick={() => connectSource(s.id)} aria-label="Connect {s.label}">Connect</button>
 				{/if}
 			</div>
 		</div>
@@ -47,8 +59,79 @@
 		Continue to your context →
 	</button>
 </div>
+{:else}
+	<!-- LIVE: real connection state from the extension -->
+	<section class="head">
+		<span class="step eyebrow">Live mode</span>
+		<h1>Your connections</h1>
+		<p class="lede">
+			In live mode Contxt reads your sources through the browser extension. Manage connections in
+			the extension popup — click the Contxt icon → Connect.
+		</p>
+	</section>
+
+	{#if !ext.checked}
+		<p class="live-msg mono">Checking for the Contxt extension…</p>
+	{:else if ext.present}
+		<div class="sources">
+			<div class="source" class:connected={ext.connections.google}>
+				<div class="source-icon">◈</div>
+				<div class="source-body">
+					<div class="source-title">Google — Gmail + Calendar</div>
+					<div class="source-blurb">
+						{ext.connections.google
+							? ext.connections.googleEmail || 'connected'
+							: 'not connected — open the extension to connect'}
+					</div>
+				</div>
+				<span class="done mono">{ext.connections.google ? 'Connected' : '—'}</span>
+			</div>
+			<div class="source" class:connected={ext.connections.notion}>
+				<div class="source-icon">◈</div>
+				<div class="source-body">
+					<div class="source-title">Notion</div>
+					<div class="source-blurb">
+						{ext.connections.notion
+							? ext.connections.notionWorkspace || 'connected'
+							: 'not connected — open the extension to connect'}
+					</div>
+				</div>
+				<span class="done mono">{ext.connections.notion ? 'Connected' : '—'}</span>
+			</div>
+		</div>
+		<div class="foot">
+			<span class="count mono">Managed in the Contxt extension</span>
+			<a class="btn btn-primary" href="{base}/viewer">See your live context →</a>
+		</div>
+	{:else}
+		<div class="source" style="display:block">
+			<p>The Contxt extension isn't installed — live mode reads your context from it.</p>
+			<ol class="live-steps mono">
+				<li>Clone <a href="https://github.com/Blackx16/contxt">github.com/Blackx16/contxt</a></li>
+				<li>chrome://extensions → Developer mode → Load unpacked → <code>extension/</code></li>
+				<li>Reload this page</li>
+			</ol>
+		</div>
+	{/if}
+{/if}
 
 <style>
+	.live-msg {
+		color: var(--text-muted);
+		font-size: 0.86rem;
+	}
+	.live-steps {
+		margin: 10px 0 0;
+		padding-left: 20px;
+		color: var(--text-muted);
+		font-size: 0.8rem;
+		line-height: 1.9;
+	}
+	.live-steps code {
+		background: var(--graphite);
+		padding: 1px 5px;
+		border-radius: var(--r-xs);
+	}
 	.head {
 		max-width: 640px;
 		margin-bottom: 36px;

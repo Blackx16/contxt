@@ -3,6 +3,8 @@
 	import { base } from '$app/paths';
 	import CardItem from '$lib/components/CardItem.svelte';
 	import PrivacyToggles from '$lib/components/PrivacyToggles.svelte';
+	import ExtensionPanel from '$lib/components/ExtensionPanel.svelte';
+	import { demo } from '$lib/demo.svelte';
 	import {
 		loadCards,
 		connectedSources,
@@ -53,15 +55,20 @@
 <section class="head">
 	<div>
 		<h1>Your context</h1>
-		<p class="sub mono">
-			{cards.length} card{cards.length === 1 ? '' : 's'} · {connected.length} source{connected.length ===
-			1
-				? ''
-				: 's'} ·
-			<span class="c-shared">{sharedCount} shared</span> ·
-			<span class="c-private">{privateCount} private</span>
-		</p>
+		{#if demo.on}
+			<p class="sub mono">
+				{cards.length} card{cards.length === 1 ? '' : 's'} · {connected.length} source{connected.length ===
+				1
+					? ''
+					: 's'} ·
+				<span class="c-shared">{sharedCount} shared</span> ·
+				<span class="c-private">{privateCount} private</span>
+			</p>
+		{:else}
+			<p class="sub mono">Live — from your installed Contxt extension</p>
+		{/if}
 	</div>
+	{#if demo.on}
 	<div class="head-right">
 		{#if cards.length}
 			<button
@@ -88,7 +95,10 @@
 			</div>
 		{/if}
 	</div>
+	{/if}
 </section>
+
+{#if demo.on}
 
 {#if showKey && cryptoReady.value}
 	<div class="key-panel">
@@ -131,6 +141,9 @@
 	{#if shown.length === 0}
 		<p class="none">No {filter} cards.</p>
 	{/if}
+{/if}
+{:else}
+	<ExtensionPanel />
 {/if}
 
 <style>

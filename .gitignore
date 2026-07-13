@@ -228,3 +228,4 @@ __marimo__/
 .streamlit/secrets.toml
 
 .DS_Store
+extension/ui-src/node_modules/

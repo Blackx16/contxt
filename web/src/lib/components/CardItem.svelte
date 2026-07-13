@@ -64,7 +64,7 @@
 			<code class="cipher mono">{shortCipher(encryptedBlob.ciphertext)}</code>
 			<div class="cipher-meta mono">iv: {encryptedBlob.iv.slice(0, 16)}…</div>
 			{#if onDecrypt}
-				<button class="btn-decrypt" onclick={onDecrypt} disabled={isDecrypting} aria-busy={isDecrypting}>
+				<button class="btn-decrypt" onclick={onDecrypt} disabled={isDecrypting} aria-busy={isDecrypting} aria-label="Decrypt {card.title} locally">
 					{isDecrypting ? 'Decrypting…' : 'Decrypt locally'}
 				</button>
 			{/if}
