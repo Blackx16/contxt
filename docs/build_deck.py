@@ -149,14 +149,14 @@ content(8, "One product", "A web dashboard that mirrors the extension.", [
     ("Real-time bridge.", "Connect a source in the extension → the site updates instantly."),
 ], accent=PATINA)
 content(9, "Under the hood", "Small, portable, open.", [
-    ("On-device:", "Gemma 3 270M via Transformers.js + WebGPU; deterministic-rules safety floor."),
+    ("On-device:", "Fine-tuned Gemma 3 270M (ONNX q4f16) via Transformers.js; deterministic-rules safety floor."),
     ("Cloud distill:", "gpt-oss-120B on Fireworks AI (SHARED tier → context cards + draft_reply)."),
     ("Stack:", "SvelteKit · MV3 extension · Python MCP server + HTTP bridge · Web Crypto · public Docker image (GHCR)."),
 ])
-content(10, "On-device model", "A fine-tuned Gemma gateway — trained, not theoretical.", [
-    ("Custom-tuned.", "Gemma 3 270M fine-tuned to emit the tier JSON, merged, exported to ONNX (q4f16, ~273 MB) and pushed to Hugging Face — runs fully in-browser."),
-    ("Real dataset + ship gate.", "1,438 train / 253 held-out rows (rules-oracle seed + synthetic hard cases); gated on PRIVATE-recall — safety-asymmetric by design."),
-    ("See the work.", "Training code, dataset & the single-source-of-truth prompt contract live in finetune/ — branch finetune/gemma-gateway-270m."),
+content(10, "On-device model", "A fine-tuned Gemma gateway — trained, benchmarked, shipped.", [
+    ("Custom-tuned.", "Gemma 3 270M fine-tuned to emit the tier JSON → ONNX q4f16 (WASM), live on Hugging Face: chandr1601/contxt-gateway-270m-onnx."),
+    ("Beats base decisively.", "253 hold-out rows: JSON-valid 100% (vs 79%), tier-accuracy 97.6% (vs 43%), PRIVATE recall 99.4% (vs 69%) — cleared the 0.98 ship gate."),
+    ("See the work.", "1,438-row dataset, training code & the prompt contract in finetune/ (branch finetune/gemma-gateway-270m)."),
 ])
 content(11, "Roadmap", "One context layer. Every AI. Your data stays yours.", [
     ("Today.", "Web + extension, live injection across Claude / ChatGPT / Gemini."),

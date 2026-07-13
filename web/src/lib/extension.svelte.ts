@@ -9,16 +9,30 @@
  * dev extension).
  */
 type ExtCard = { source: string; title: string; summary?: string; body?: string };
+type SealedBlob = { alg?: string; ct: string; iv: string };
+type PrivateCard = {
+	source: string;
+	title: string;
+	heldBy?: string[];
+	reason?: string;
+	forced?: boolean;
+	blob?: SealedBlob;
+};
 type Conns = { google: boolean; googleEmail: string; notion: boolean; notionWorkspace: string };
+export type PolicyState = Record<string, boolean>;
 
 export const ext = $state({
 	checked: false,
 	present: false,
 	loading: false,
 	cards: [] as ExtCard[],
+	privateCards: [] as PrivateCard[],
 	privateTotal: 0,
+	heldTotal: 0,
 	source: '' as string,
-	connections: { google: false, googleEmail: '', notion: false, notionWorkspace: '' } as Conns
+	connections: { google: false, googleEmail: '', notion: false, notionWorkspace: '' } as Conns,
+	policy: null as PolicyState | null,
+	categoryCounts: null as Record<string, number> | null
 });
 
 const TAG_OUT = 'contxt-extension'; // extension → page
@@ -33,9 +47,13 @@ function applyContext(m: any) {
 	ext.present = true;
 	if (m.ok) {
 		ext.cards = m.cards || [];
+		ext.privateCards = m.privateCards || [];
 		ext.privateTotal = m.private_total || 0;
+		ext.heldTotal = m.heldTotal || 0;
 		ext.source = m.contextSource || '';
 		if (m.connections) ext.connections = m.connections;
+		if (m.policy) ext.policy = m.policy;
+		if (m.categoryCounts) ext.categoryCounts = m.categoryCounts;
 	}
 	ext.loading = false;
 }
@@ -49,7 +67,7 @@ function ensureListener() {
 		if (!m || m.source !== TAG_OUT) return;
 		if (m.type === 'present') ext.present = true;
 		if (m.type === 'context') applyContext(m);
-		if ((m.type === 'pong' || m.type === 'context') && m.reqId != null) {
+		if ((m.type === 'pong' || m.type === 'context' || m.type === 'policy:set') && m.reqId != null) {
 			const cb = pending.get(m.reqId);
 			if (cb) {
 				pending.delete(m.reqId);
@@ -88,4 +106,17 @@ export async function loadExtensionContext(query = 'what am I working on') {
 	ext.loading = true;
 	await call('get:context', { query }, 5000);
 	ext.loading = false;
+}
+
+/**
+ * Flip one privacy rule in the extension. Optimistically updates the local
+ * policy, tells the extension to persist + re-tier, then reloads the snapshot so
+ * cards move between SHARED and PRIVATE live. (The extension also pushes an
+ * unsolicited snapshot via storage.onChanged, so this is belt-and-suspenders.)
+ */
+export async function setPolicy(id: string, on: boolean): Promise<void> {
+	if (ext.policy) ext.policy = { ...ext.policy, [id]: on };
+	const res = await call('set:live:policy', { id, on }, 2000);
+	if (res?.policy) ext.policy = res.policy;
+	await loadExtensionContext();
 }

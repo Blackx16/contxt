@@ -127,9 +127,16 @@
       else sh.push({ source: it.source, title: it.title, sum: clip(it.text) });
     }
     const toCard = (c) => ({ tier: 'shared', source: c.source, title: c.title, summary: clip(c.sum, 220) });
+    // Raw items (extension-only) — the background re-tiers these against the live
+    // privacy policy so the site's toggles re-classify in real time. Plaintext
+    // stays in extension storage; only sealed blobs cross the bridge.
+    const liveItems = deduped.map((it, i) => ({
+      id: `live_${i}`, source: it.source, title: it.title, text: clip(it.text, 600),
+    }));
     await setLocal({
-      liveSharedCards: sh.slice(0, 6).map(toCard),  // capped — tight cloud/AI injection
-      liveSharedCardsFull: sh.map(toCard),           // everything — the web dashboard shows all
+      liveItems,
+      liveSharedCards: sh.slice(0, 6).map(toCard),  // legacy fallback — tight injection
+      liveSharedCardsFull: sh.map(toCard),           // legacy fallback — full list
       livePrivateCount: pv.length, liveUpdatedAt: Date.now()
     });
     shared = sh; priv = pv; privCount = pv.length; ctxErrors = errors;

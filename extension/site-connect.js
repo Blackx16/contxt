@@ -22,8 +22,10 @@ function post(type, payload = {}) {
   window.postMessage({ source: TAG_OUT, type, version: VERSION, ...payload }, window.location.origin);
 }
 
-// Fetch the full SHARED context + connection status and post it to the page.
-// reqId matches a page request; reqId 0 is an unsolicited real-time push.
+// Fetch the full context + connection status and post it to the page. Includes
+// the SHARED cards, the PRIVATE cards as SEALED blobs (title + which rule held
+// them, ciphertext body — no key), and the live privacy policy + counts so the
+// site can render working toggles. reqId 0 is an unsolicited real-time push.
 function fetchAndPost(reqId) {
   chrome.runtime.sendMessage(
     { type: 'get:context', query: 'what am I working on', full: true },
@@ -34,7 +36,11 @@ function fetchAndPost(reqId) {
         ok: !err && resp?.ok !== false,
         error: err ? err.message : resp?.error,
         cards: resp?.cards || [],
+        privateCards: resp?.privateCards || [],
         private_total: resp?.private_total ?? resp?.private_withheld ?? 0,
+        heldTotal: resp?.heldTotal ?? 0,
+        policy: resp?.policy || null,
+        categoryCounts: resp?.categoryCounts || null,
         contextSource: resp?.source,
         connections: resp?.connections || null,
       });
@@ -57,6 +63,18 @@ window.addEventListener('message', (event) => {
     fetchAndPost(msg.reqId);
     return;
   }
+  // The site's privacy toggles → persist the new policy in the extension. The
+  // storage.onChanged listener below then pushes a re-tiered snapshot back.
+  if (msg.type === 'set:live:policy') {
+    chrome.runtime.sendMessage(
+      { type: 'set:live:policy', id: msg.id, on: msg.on, policy: msg.policy },
+      (resp) => {
+        const err = chrome.runtime.lastError;
+        post('policy:set', { reqId: msg.reqId, ok: !err && resp?.ok !== false, policy: resp?.policy || null });
+      },
+    );
+    return;
+  }
 });
 
 // Real-time sync: when the popup connects/disconnects a source or re-pulls, its
@@ -64,8 +82,8 @@ window.addEventListener('message', (event) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   const keys = [
-    'liveSharedCardsFull', 'liveSharedCards', 'googleEmail',
-    'notionConnected', 'notionWorkspace', 'livePrivateCount',
+    'liveItems', 'livePolicy', 'liveSharedCardsFull', 'liveSharedCards',
+    'googleEmail', 'notionConnected', 'notionWorkspace', 'livePrivateCount',
   ];
   if (keys.some((k) => k in changes)) fetchAndPost(0);
 });

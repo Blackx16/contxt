@@ -4,7 +4,7 @@
 
 Portable, privacy-first context layer for every AI. Built for the **AMD Developer Hackathon ACT II** (Track 3 — Unicorn; on-device Gemma bonus).
 
-**▶ Live demo:** https://blackx16.github.io/contxt/ &nbsp;·&nbsp; **Repo:** https://github.com/Blackx16/contxt
+**▶ Live demo:** https://blackx16.github.io/contxt/ &nbsp;·&nbsp; **Repo:** https://github.com/Blackx16/contxt &nbsp;·&nbsp; **Model:** [🤗 chandr1601/contxt-gateway-270m-onnx](https://huggingface.co/chandr1601/contxt-gateway-270m-onnx)
 
 ## Why
 Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) grew a memory in 2026 — five walled gardens, none talk to each other, and you re-introduce yourself to each one. Every memory product (Mem0, Supermemory, Letta) is cloud-first and developer-facing. Contxt is the consumer piece nobody built: **portable across every AI, and privacy-first — your crown jewels never leave your device.**
@@ -14,12 +14,24 @@ Every AI (ChatGPT, Claude, Gemini, Copilot, Grok) grew a memory in 2026 — five
 - **Web app** (`web/`, deployed to GitHub Pages) — the explainer, dashboard, and crypto/multi-device proof. A **Demo / Live** toggle (top-right) switches between the built-in demo and *your* live context read from the installed extension in real time.
 
 ## Architecture — two tiers
-- **PRIVATE (crown jewels):** classified on-device (Gemma 3 270M + deterministic rules), end-to-end encrypted. The cloud is a **blind relay** (ciphertext only) for multi-device sync. Zero-knowledge.
+- **PRIVATE (crown jewels):** classified on-device (a **fine-tuned Gemma 3 270M** + deterministic rules), end-to-end encrypted. The cloud is a **blind relay** (ciphertext only) for multi-device sync. Zero-knowledge.
 - **SHARED:** distilled by a cloud LLM into reusable context cards any AI can read over MCP.
 - **Crown-Jewels Gateway:** the on-device router that sorts each item PRIVATE vs SHARED. It is the trust boundary — and the product.
 
 ## Cloud inference
 SHARED-tier distillation and `draft_reply` run on **gpt-oss-120B via Fireworks AI** (set with `CONTXT_CLOUD_MODEL`). The on-device PRIVATE tier runs **Gemma 3 270M** via WebGPU. Every cloud call logs `contxt:cloud_llm endpoint=… model=… usage=…` for capture (`gateway/distill.py`).
+
+## On-device model (fine-tuned)
+The PRIVATE-vs-SHARED decision runs on a **fine-tuned Gemma 3 270M**, hosted at [🤗 `chandr1601/contxt-gateway-270m-onnx`](https://huggingface.co/chandr1601/contxt-gateway-270m-onnx) and loaded in-browser via Transformers.js (q4f16 ONNX, WASM). It emits the tier JSON `{"tier","sensitivity","categories","reason"}`; deterministic rules (`gateway/rules.py`) are an always-on safety floor beneath it. Fine-tuned on 1,438 train / 253 held-out rows with a PRIVATE-recall ship gate.
+
+| Metric (253 hold-out) | Fine-tuned | Base (zero-shot) |
+| --- | --- | --- |
+| JSON valid | **100%** | 79.4% |
+| Tier accuracy | **97.6%** | 43.1% |
+| PRIVATE recall | **99.4%** | 69.0% |
+| Sensitivity MAE | **0.050** | 0.475 |
+
+Training code, dataset, and the single-source-of-truth prompt contract live in `finetune/` on branch `finetune/gemma-gateway-270m`.
 
 ## Pipeline
 Ingest (Gmail + Calendar + Notion) → Gateway (on-device tier decision) → Distill (on-device Gemma for PRIVATE / cloud gpt-oss-120B for SHARED → context cards) → Store (E2E blind relay for PRIVATE; store for SHARED) → Serve over MCP (`get_context` / `draft_reply`) → any AI.
@@ -56,7 +68,7 @@ The published image serves the HTTP bridge in **mock mode** (no API keys). For r
 ## Stack
 - **Web:** SvelteKit 2 + Svelte 5 (fully static, GitHub Pages)
 - **Extension:** MV3 — Svelte popup, offscreen WebGPU Gemma runtime, content-script injection + a site bridge
-- **On-device model:** Gemma 3 270M (fp16) via Transformers.js + WebGPU
+- **On-device model:** fine-tuned Gemma 3 270M (q4f16 ONNX, WASM) via Transformers.js — [🤗 chandr1601/contxt-gateway-270m-onnx](https://huggingface.co/chandr1601/contxt-gateway-270m-onnx)
 - **Cloud model:** gpt-oss-120B on Fireworks AI
 - **Encryption:** Web Crypto API (AES-256-GCM + ECDH), QR key transfer
 - **Server:** Python MCP server (`get_context`, `draft_reply`) + local HTTP bridge + blind relay
