@@ -83,7 +83,7 @@ def test_finance_item_is_routed_private_by_the_gateway():
 
 def test_shared_item_flows_into_the_distiller(monkeypatch):
     monkeypatch.setattr(
-        distill, "_call_cloud_gemma",
+        distill, "_call_cloud_llm",
         lambda system, user, **kw: '{"title":"t","summary":"s","body":null,'
                                    '"entities":[],"sensitivity_score":0.2,"meta":{}}',
     )

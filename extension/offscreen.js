@@ -1,5 +1,5 @@
 /**
- * Crown-Jewels Gateway — on-device Gemma 3 270M (fp16) classifier.
+ * Crown-Jewels Gateway — fine-tuned Gemma 3 270M (q4f16/WASM) classifier.
  *
  * Runs in the MV3 offscreen document (never the service worker / content
  * script) so it can use WebGPU and keep model weights off the main thread.
@@ -33,9 +33,10 @@ import { classifyFallback, ruleHits, DEFAULT_PRIVATE_KEYWORDS } from './rules.js
 
 // ── Lazy Transformers.js loader ───────────────────────────────────────────────
 
-// Gemma 3 270M instruction-tuned ONNX model on Hugging Face.
-// The fp16 weights are ~570 MB on first load; subsequent loads are from Cache API.
-const MODEL_ID = 'onnx-community/gemma-3-270m-it-ONNX';
+// Fine-tuned Gemma 3 270M gateway classifier — trained on 1,438 labeled examples,
+// 97.6% tier accuracy vs 43.1% for the base model (eval: finetune/dataset/eval.md).
+// q4f16 weights are ~407 MB on first load; subsequent loads are from Cache API.
+const MODEL_ID = 'chandr1601/contxt-gateway-270m-onnx';
 
 let _tf = null;
 async function getTransformers() {
@@ -102,14 +103,14 @@ function loadClassifier(onProgress) {
       typeof SharedArrayBuffer,
       !!navigator.gpu,
     );
-    console.info('[contxt] Loading Gemma 3 270M (fp16) via WebGPU…');
+    console.info('[contxt] Loading fine-tuned Gemma 3 270M (q4f16/WASM)…');
     const clf = await pipeline('text-generation', MODEL_ID, {
-      // fp16, not q4: 4-bit quantization mangles a model this small on WebGPU
-      // (the repo maintainer's own example uses a non-4-bit dtype). fp16 is the
-      // quality/size sweet spot and WebGPU-native, so Pass 2 emits usable JSON
-      // instead of garbage that silently falls back to rules.
-      dtype: 'fp16',
-      device: 'webgpu',
+      // q4f16 on WASM: avoids the onnxruntime#26732 fp16+WebGPU overflow bug
+      // (activations → infinity on WebGPU with float16). WASM is single-threaded
+      // but does not need SharedArrayBuffer / cross-origin isolation — eliminating
+      // the offscreen-doc fragility. q4f16 = 407 MB, cached after first download.
+      dtype: 'q4f16',
+      device: 'wasm',
       // Streams file-download progress to the popup's download bar (first load
       // only; weights come from the Cache API thereafter).
       progress_callback: onProgress || undefined,

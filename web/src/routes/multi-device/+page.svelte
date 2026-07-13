@@ -10,6 +10,8 @@
 		decryptOnB,
 		reset
 	} from '$lib/multidevice.svelte';
+	import { demo } from '$lib/demo.svelte';
+	import { ext, detectExtension, loadExtensionContext } from '$lib/extension.svelte';
 
 	let pasteVal = $state('');
 	let showPaste = $state(false);
@@ -31,8 +33,18 @@
 	onMount(() => {
 		initDemo();
 	});
+
+	// Live mode: reflect the extension's real on-device encryption state.
+	let probed = false;
+	$effect(() => {
+		if (!demo.on && !probed) {
+			probed = true;
+			detectExtension().then((p) => p && loadExtensionContext());
+		}
+	});
 </script>
 
+{#if demo.on}
 <section class="head">
 	<div class="head-copy">
 		<span class="eyebrow">Multi-device · QR key transfer · blind relay</span>
@@ -218,8 +230,40 @@
 		{/if}
 	</article>
 </div>
+{:else}
+	<!-- LIVE: on-device encryption reality -->
+	<section class="head">
+		<div class="head-copy">
+			<span class="eyebrow">Live mode · on-device encryption</span>
+			<h1>Your crown jewels stay on this device.</h1>
+			{#if !ext.checked}
+				<p class="lede mono">Checking for the Contxt extension…</p>
+			{:else if ext.present}
+				<p class="lede">
+					The Contxt extension classified <strong>{ext.privateTotal}</strong> private item(s) on this
+					device — encrypted locally, never sent to any AI or the cloud. To move them to another
+					device, the extension transfers your key by QR; the cloud only ever relays ciphertext.
+				</p>
+			{:else}
+				<p class="lede">
+					Private items are classified and encrypted on your device by the Contxt extension — the
+					cloud is only ever a blind relay of ciphertext. Install the extension to see your live
+					counts.
+				</p>
+			{/if}
+			<p class="live-hint mono">
+				Want the full seal → relay → QR → decrypt walkthrough? Switch to Demo mode (top right).
+			</p>
+		</div>
+	</section>
+{/if}
 
 <style>
+	.live-hint {
+		margin-top: 16px;
+		color: var(--text-faint);
+		font-size: 0.72rem;
+	}
 	.head {
 		display: flex;
 		align-items: flex-start;

@@ -1,18 +1,16 @@
 /**
- * Cloud Gemma distillation — JS mirror of gateway/distill.py, for the popup.
+ * Cloud distillation — JS mirror of gateway/distill.py, for the popup.
  *
- * SHARED-tier items → rich context cards via cloud Gemma (Fireworks default,
- * or an AMD Dev Cloud endpoint). PRIVATE items are BLOCKED here — the same
- * belt-and-suspenders guard as the Python path, so a crown jewel can never be
- * sent to the cloud from the UI.
+ * SHARED-tier items → rich context cards via gpt-oss-120B on Fireworks AI.
+ * PRIVATE items are BLOCKED here — the same belt-and-suspenders guard as the
+ * Python path, so a crown jewel can never be sent to the cloud from the UI.
  *
- * The console logs mirror the Python server (`contxt:cloud_gemma` /
- * `contxt:cloud_gemma_ok`) so the AMD-hosted inference is capturable for the
- * "Best AMD-Hosted Gemma Project" prize submission.
+ * The console logs mirror the Python server (`contxt:cloud_llm` /
+ * `contxt:cloud_llm_ok`) so each cloud call is capturable.
  */
 
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const DEFAULT_MODEL = 'accounts/fireworks/models/gemma-4-31b-it';
+const DEFAULT_MODEL = 'accounts/fireworks/models/gpt-oss-120b';
 
 const VALID_SOURCES = ['gmail', 'calendar', 'notion'];
 const VALID_ENTITY_TYPES = [
@@ -91,7 +89,7 @@ function toContextCard(data, source, text) {
 // ── public API ────────────────────────────────────────────────────────────────
 
 /**
- * Distill a SHARED item into a context card via cloud Gemma.
+ * Distill a SHARED item into a context card via the cloud LLM.
  *
  * @param {string} text  the raw item text
  * @param {object} opts  { source, tier, apiKey, endpoint, model }
@@ -105,7 +103,7 @@ export async function distillItem(text, opts = {}) {
   if (String(tier).toUpperCase() === 'PRIVATE') {
     throw new Error(
       'Refusing to distill a PRIVATE item — it stays on-device and is never ' +
-        'sent to cloud Gemma.',
+        'sent to the cloud LLM.',
     );
   }
   if (!VALID_SOURCES.includes(source)) {
@@ -128,7 +126,7 @@ export async function distillItem(text, opts = {}) {
     temperature: 0.1,
   };
 
-  console.info('[contxt] cloud_gemma endpoint=%s model=%s', url, chosenModel);
+  console.info('[contxt] cloud_llm endpoint=%s model=%s', url, chosenModel);
   const resp = await fetch(url, {
     method: 'POST',
     headers: {
@@ -140,11 +138,11 @@ export async function distillItem(text, opts = {}) {
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => '');
-    throw new Error(`Cloud Gemma HTTP ${resp.status}: ${detail.slice(0, 200)}`);
+    throw new Error(`Cloud LLM HTTP ${resp.status}: ${detail.slice(0, 200)}`);
   }
 
   const data = await resp.json();
-  console.info('[contxt] cloud_gemma_ok id=%s usage=%o', data.id, data.usage);
+  console.info('[contxt] cloud_llm_ok id=%s usage=%o', data.id, data.usage);
 
   const content = data?.choices?.[0]?.message?.content ?? '';
   const parsed = extractJSON(content);

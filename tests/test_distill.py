@@ -3,7 +3,7 @@
 Proves the three "Done when" criteria:
   1. SHARED items become schema-valid context cards.
   2. PRIVATE items are provably never sent to the cloud model.
-  3. Every cloud call emits the capturable `contxt:cloud_gemma` log line.
+  3. Every cloud call emits the capturable `contxt:cloud_llm` log line.
 
 Runs with pytest, or standalone:  python3 -m tests.test_distill
 The cloud HTTP call is stubbed — no network, no API key required.
@@ -25,7 +25,7 @@ from gateway import distill
 
 def test_shared_item_becomes_schema_valid_card(monkeypatch):
     monkeypatch.setattr(
-        distill, "_call_cloud_gemma",
+        distill, "_call_cloud_llm",
         lambda system, user, **kw: json.dumps({
             "title": "Standup notes",
             "summary": "Daily standup at 10am with the platform team.",
@@ -55,7 +55,7 @@ def test_private_item_is_refused_before_any_cloud_call(monkeypatch):
         called["n"] += 1
         raise AssertionError("cloud Gemma was called with a PRIVATE item!")
 
-    monkeypatch.setattr(distill, "_call_cloud_gemma", _boom)
+    monkeypatch.setattr(distill, "_call_cloud_llm", _boom)
 
     raised = False
     try:
@@ -74,7 +74,7 @@ def test_batch_skips_private_keeps_shared(monkeypatch):
         return json.dumps({"title": "t", "summary": "s", "body": None,
                            "entities": [], "sensitivity_score": 0.2, "meta": {}})
 
-    monkeypatch.setattr(distill, "_call_cloud_gemma", _fake)
+    monkeypatch.setattr(distill, "_call_cloud_llm", _fake)
     cards = distill.distill_batch([
         {"source": "gmail", "text": "loan EMI due", "_tier": "private"},
         {"source": "notion", "text": "architecture notes", "_tier": "shared"},
@@ -91,7 +91,7 @@ def test_batch_skips_private_keeps_shared(monkeypatch):
 
 def test_out_of_range_and_bad_entities_are_coerced(monkeypatch):
     monkeypatch.setattr(
-        distill, "_call_cloud_gemma",
+        distill, "_call_cloud_llm",
         lambda system, user, **kw: json.dumps({
             "title": "x" * 500,               # too long → truncated
             "summary": "ok",
@@ -115,7 +115,7 @@ def test_out_of_range_and_bad_entities_are_coerced(monkeypatch):
 
 
 def test_malformed_json_falls_back_to_valid_card(monkeypatch):
-    monkeypatch.setattr(distill, "_call_cloud_gemma", lambda system, user, **kw: "not json at all")
+    monkeypatch.setattr(distill, "_call_cloud_llm", lambda system, user, **kw: "not json at all")
     card = distill.distill_item({"source": "gmail", "text": "hello world", "_tier": "shared"})
     ContextCard.model_validate(card)  # must still be valid
 
@@ -135,8 +135,8 @@ def test_cloud_call_emits_capturable_log_line(caplog):
     os.environ["CONTXT_MOCK_GEMMA"] = "1"
     try:
         with caplog.at_level(logging.INFO, logger="gateway.distill"):
-            distill._call_cloud_gemma(distill._DISTILL_SYSTEM, "Source: notion\n\nItem:\nhi")
-        assert any("contxt:cloud_gemma" in r.getMessage() for r in caplog.records)
+            distill._call_cloud_llm(distill._DISTILL_SYSTEM, "Source: notion\n\nItem:\nhi")
+        assert any("contxt:cloud_llm" in r.getMessage() for r in caplog.records)
     finally:
         os.environ.pop("CONTXT_MOCK_GEMMA", None)
 
@@ -145,7 +145,7 @@ def test_cloud_call_emits_capturable_log_line(caplog):
 
 def test_distill_draft_returns_string(monkeypatch):
     monkeypatch.setattr(
-        distill, "_call_cloud_gemma",
+        distill, "_call_cloud_llm",
         lambda system, user, **kw: "Thanks — I'll follow up on the standup shortly.",
     )
     result = distill.distill_draft(
@@ -164,7 +164,7 @@ def test_distill_draft_does_not_include_private_content(monkeypatch):
         received_prompt["user"] = user
         return "Thanks for your note."
 
-    monkeypatch.setattr(distill, "_call_cloud_gemma", _capture)
+    monkeypatch.setattr(distill, "_call_cloud_llm", _capture)
 
     shared_ctx = '[{"title": "Contxt architecture", "summary": "Two-tier context layer"}]'
     distill.distill_draft("Tell me about the standup", shared_ctx)
@@ -180,7 +180,7 @@ def test_distill_draft_does_not_include_private_content(monkeypatch):
 def test_distill_draft_respects_max_words_in_system_prompt(monkeypatch):
     received = {}
     monkeypatch.setattr(
-        distill, "_call_cloud_gemma",
+        distill, "_call_cloud_llm",
         lambda system, user, **kw: received.update({"system": system}) or "ok",
     )
     distill.distill_draft("hello", "[]", max_words=42)
