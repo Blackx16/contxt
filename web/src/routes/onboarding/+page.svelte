@@ -1,11 +1,26 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
-	import { SOURCES, conn, connectSource, disconnectSource, connectedSources } from '$lib/state.svelte';
+	import { conn, connectSource, disconnectSource } from '$lib/state.svelte';
+	import { PROVIDERS, type Provider } from '$lib/sources';
 	import { demo } from '$lib/demo.svelte';
 	import { ext, detectExtension, loadExtensionContext } from '$lib/extension.svelte';
 
-	const count = $derived(connectedSources().length);
+	function providerStatus(p: Provider): 'connected' | 'connecting' | 'idle' {
+		const st = p.sources.map((s) => conn[s]);
+		if (st.every((x) => x === 'connected')) return 'connected';
+		if (st.some((x) => x === 'connecting')) return 'connecting';
+		return 'idle';
+	}
+	async function connectProvider(p: Provider) {
+		await Promise.all(p.sources.map((s) => connectSource(s)));
+	}
+	function disconnectProvider(p: Provider) {
+		p.sources.forEach((s) => disconnectSource(s));
+	}
+	const count = $derived(
+		PROVIDERS.filter((p) => p.sources.every((s) => conn[s] === 'connected')).length
+	);
 
 	// Live mode: reflect the extension's real connection state, not the sim.
 	let probed = false;
@@ -29,24 +44,26 @@
 </section>
 
 <div class="sources">
-	{#each SOURCES as s (s.id)}
-		{@const status = conn[s.id]}
+	{#each PROVIDERS as p (p.id)}
+		{@const status = providerStatus(p)}
 		<div class="source" class:connected={status === 'connected'}>
-			<div class="source-icon">{s.icon}</div>
+			<div class="source-icon">{@html p.logo}</div>
 			<div class="source-body">
-				<div class="source-title">{s.label}</div>
-				<div class="source-blurb">{s.blurb}</div>
+				<div class="source-title">
+					{p.label}{#if p.sub}<span class="source-sub"> — {p.sub}</span>{/if}
+				</div>
+				<div class="source-blurb">{p.blurb}</div>
 			</div>
 			<div class="source-action">
 				{#if status === 'connected'}
 					<span class="done mono">Connected</span>
-					<button class="btn ghost" onclick={() => disconnectSource(s.id)} aria-label="Disconnect {s.label}">Disconnect</button>
+					<button class="btn ghost" onclick={() => disconnectProvider(p)} aria-label="Disconnect {p.label}">Disconnect</button>
 				{:else if status === 'connecting'}
-					<button class="btn" disabled aria-label="Connecting {s.label}">
+					<button class="btn" disabled aria-label="Connecting {p.label}">
 						<span class="spinner"></span> Ingesting…
 					</button>
 				{:else}
-					<button class="btn btn-primary" onclick={() => connectSource(s.id)} aria-label="Connect {s.label}">Connect</button>
+					<button class="btn btn-primary" onclick={() => connectProvider(p)} aria-label="Connect {p.label}">Connect</button>
 				{/if}
 			</div>
 		</div>
@@ -54,7 +71,7 @@
 </div>
 
 <div class="foot">
-	<span class="count mono">{count} of {SOURCES.length} connected</span>
+	<span class="count mono">{count} of {PROVIDERS.length} connected</span>
 	<button class="btn btn-primary" disabled={count === 0} onclick={() => goto(`${base}/viewer`)}>
 		Continue to your context →
 	</button>
@@ -166,7 +183,6 @@
 		border-color: var(--rule-strong);
 	}
 	.source-icon {
-		font-size: 1.4rem;
 		width: 42px;
 		height: 42px;
 		display: grid;
@@ -176,6 +192,10 @@
 		border-radius: var(--r-md);
 		flex-shrink: 0;
 	}
+	.source-icon :global(svg) {
+		width: 22px;
+		height: 22px;
+	}
 	.source-body {
 		flex: 1;
 		min-width: 0;
@@ -184,6 +204,10 @@
 		font-weight: 500;
 		font-size: 1.05rem;
 		color: var(--champagne);
+	}
+	.source-sub {
+		color: var(--text-muted);
+		font-weight: 400;
 	}
 	.source-blurb {
 		color: var(--text-muted);

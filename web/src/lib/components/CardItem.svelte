@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ContextCard } from '$lib/types';
+	import { sourceLogo } from '$lib/sources';
 
 	let {
 		card,
@@ -33,7 +34,7 @@
 
 <article class="card" class:card-private={isPrivate} class:card-locked={isLocked}>
 	<header class="card-head">
-		<span class="src mono">{card.source}</span>
+		<span class="src mono"><span class="src-logo">{@html sourceLogo(card.source)}</span>{card.source}</span>
 		<span class="tag {isPrivate ? 'tag-private' : 'tag-shared'}">
 			{isPrivate ? 'Private' : 'Shared'}
 		</span>
@@ -146,10 +147,20 @@
 		justify-content: space-between;
 	}
 	.src {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
 		color: var(--text-faint);
 		font-size: 0.68rem;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
+	}
+	.src-logo {
+		display: inline-flex;
+	}
+	.src-logo :global(svg) {
+		width: 14px;
+		height: 14px;
 	}
 	.card-title {
 		font-size: 1.08rem;

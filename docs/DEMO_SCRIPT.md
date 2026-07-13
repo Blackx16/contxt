@@ -1,36 +1,35 @@
-# Contxt — demo video script
+# Contxt — demo video (silent, caption-driven)
 
-**Target:** ≤ 4 minutes · 1440p · AMD Developer Hackathon ACT II (Track 3).
-The climax is the **live injection into Claude** — linger there. Everything else sets it up.
+No voiceover, no narration. Just a screen recording with short on-screen text
+captions. Target **~75–90 seconds**, 1440p, 30fps. The one beat to linger on is
+the **live injection into Claude**.
 
-## Pre-flight (before you hit record)
-- [ ] Extension loaded (`chrome://extensions` → Load unpacked → `extension/`), **Google + Notion connected**, **On-device** mode with the model already downloaded (so no wait on camera).
-- [ ] `.env` has `FIREWORKS_API_KEY` set so one real `cloud_llm` call can fire (for the cloud beat). If the key isn't ready, skip the log shot and keep the sourced claim on the slide/README.
-- [ ] Live site open: **https://blackx16.github.io/contxt/** — one tab in **Live** mode, be ready to flip the top-right toggle.
-- [ ] A logged-in **claude.ai/new** tab.
-- [ ] DevTools console open on the offscreen doc / popup if you want to show the `contxt:cloud_llm` line.
-- [ ] Hide bookmarks/extra tabs; zoom the Claude composer so the injected block + badge are both legible.
+## Setup (before recording)
+- Extension loaded, **Google + Notion connected**, **On-device** mode with the model already downloaded.
+- Tabs ready: the **popup**, `claude.ai/new`, and the live site (**https://blackx16.github.io/contxt/**).
+- Hide bookmarks bar and other extensions; zoom the Claude composer so the injected block + badge are legible.
+- Capture at 1440p. Add captions in your editor (CapCut / Premiere / DaVinci) — big, bottom-center, 2–4 words, on screen ~2.5s each.
 
-## Script
+## Shot list
 
-| Time | On screen | Say (beat) |
-|---|---|---|
-| 0:00–0:20 | You, then 5 AI logos (ChatGPT/Claude/Gemini/Copilot/Grok) | "Every AI grew a memory in 2026 — five walled gardens that don't talk to each other, so you re-introduce yourself to each one. And every memory startup is cloud-first. I built the missing piece." |
-| 0:20–0:45 | Live site homepage → the two-tier block | "Contxt: one portable, privacy-first context layer for **every** AI. Two tiers — SHARED context any AI can use, and PRIVATE crown jewels that never leave your device. An **on-device gateway** decides which is which." |
-| 0:45–1:30 | Extension popup: Connected as you (Google + Notion) → Refresh → live cards appear, tagged by source; point at "🔒 N private kept on-device" | "Here's the product. It's connected to my Gmail, Calendar, and Notion. It pulls my real context and classifies every item **on-device** — Gemma 270M plus deterministic rules. See the sources. And these private items? Flagged and kept local — never shown here, never sent anywhere." |
-| 1:30–2:25 | **claude.ai/new** — page loads, context auto-injects into the composer, badge shows *N shared → this AI · P private kept on-device*. Ask Claude a real question that uses the context. | "The payoff. My extension just put my SHARED context into Claude automatically — and the badge shows the private cards it withheld. Claude answers me **with** my context… and it never saw the crown jewels. This works the same on ChatGPT and Gemini." *(linger)* |
-| 2:25–2:55 | Back to the live site, **Live** mode, `/viewer` → the SAME live cards + a green Google/Notion connection row. Toggle top-right **Demo ↔ Live**. | "And it's one product, not two. The website, in Live mode, reads the exact same context from the extension — in real time. Flip to Demo mode and anyone can explore it without installing anything." |
-| 2:55–3:25 | Site → **Devices** tab (Demo mode): Seal on A → relay shows ciphertext → QR → Decrypt on B | "Privacy, proven. A PRIVATE card is sealed on device A, relayed through the cloud as **ciphertext**, and decrypted on device B — but only after the key crosses by **QR**. The cloud never holds the key. Ciphertext alone is useless." |
-| 3:25–3:55 | Console/log: `contxt:cloud_llm endpoint=… model=gpt-oss-120b usage=…` | "The SHARED tier is distilled by **gpt-oss-120B on Fireworks AI** — one real cloud call, logged. The PRIVATE tier runs entirely on-device on Gemma. Only SHARED context ever leaves." |
-| 3:55–4:10 | Roadmap card | "Today: web + extension across every AI. Next: fully local mobile Gemma, Signal-grade sync. One context layer, every AI — and your private data stays yours. That's Contxt." |
+| # | Duration | Screen (what to record) | Caption (on-screen text) |
+|---|---|---|---|
+| 1 | 0:00–0:04 | Black screen → the Contxt logo fades in, then the wordmark | **Contxt** |
+| 2 | 0:04–0:09 | Cut to logo + tagline card | *One private context layer for every AI* |
+| 3 | 0:09–0:16 | Extension popup — "Connect your sources": Google (Gmail + Calendar) + Notion, both showing **Connected** | *Connects Gmail, Calendar & Notion* |
+| 4 | 0:16–0:24 | Popup "Your context" → click the **Private** tab; the on-device private items are listed | *Sensitive items detected on-device* |
+| 5 | 0:24–0:30 | Still on Private tab — cursor points at "kept on-device · flagged: …" | *Kept on your device — never uploaded* |
+| 6 | 0:30–0:36 | Click the **Shared** tab; the shareable cards list | *Only safe context is shareable* |
+| 7 | 0:36–0:52 | Switch to **claude.ai/new**. Page loads → the SHARED context auto-injects into the composer → the badge appears (*N shared → this AI · P private kept on-device*). **Hold on the badge.** | *Auto-injected into Claude* → then *Private data withheld* |
+| 8 | 0:52–1:00 | Type a real question in Claude that uses the context; send; Claude answers using it | *Answers with your context* |
+| 9 | 1:00–1:10 | Cut to the live site (**Live** mode) `/viewer`: Google + Notion logos in the connection row, the same shared cards, the masked-private note. Toggle one **privacy rule** off → a card moves from Private into Shared | *Same context, on the web — in real time* |
+| 10 | 1:10–1:20 | Site → **Devices** tab (Demo): Seal on Device A → relay shows ciphertext → QR → Decrypt on Device B (identical card) | *Private sync: ciphertext + QR key — cloud never sees it* |
+| 11 | 1:20–1:28 | Closing card: logo + links | *blackx16.github.io/contxt · github.com/Blackx16/contxt* |
 
-## Recording tips
-- Keep the cursor deliberate on the **badge** during 1:30–2:25 — that's the money shot.
-- If the on-device model emits noise, it silently falls back to the deterministic rules — the tiering is unaffected, so the demo is safe either way.
-- Record the injection beat in one clean take; re-inject with the extension's **Re-inject** button if the composer clears.
-- Narrate in your own voice; the "Say" column is a guide, not a script to read verbatim.
-
-## Notes
-- The **slide deck** lives at `docs/contxt-pitch.pptx` (`python3 docs/build_deck.py` to regenerate) — export to PDF for submission.
-- The cloud call is real: `gpt-oss-120B` on Fireworks AI, logged as `contxt:cloud_llm` / `contxt:cloud_llm_ok`. Only SHARED-tier items reach it; PRIVATE stays on-device.
-- Supersedes the earlier timed script in `SUBMISSION.md §2`.
+## Editing notes
+- **No voiceover.** A light background music bed (low volume, no lyrics) is optional — keep it subtle.
+- Keep captions to 2–4 words; let the UI do the talking. Don't explain the story — just label what's on screen.
+- Use quick, clean cuts (no long fades except the intro/outro). Speed up any loading spinner (the model is pre-downloaded, so there shouldn't be one).
+- The **injection beat (#7)** is the payoff — give it the most screen time and a caption pause.
+- If the on-device model ever emits noise, it silently falls back to deterministic rules; the tiering is unaffected, so the demo is safe either way.
+- Export 1080p or 1440p MP4 (H.264), ~8–12 Mbps.

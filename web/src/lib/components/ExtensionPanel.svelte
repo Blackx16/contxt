@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { ext, detectExtension, loadExtensionContext, setPolicy } from '$lib/extension.svelte';
 	import { PRIVACY_CATEGORIES } from '$lib/gateway';
+	import { GOOGLE_LOGO, NOTION_LOGO, sourceLogo } from '$lib/sources';
 
 	const REPO = 'https://github.com/Blackx16/contxt';
 
@@ -52,16 +53,18 @@
 			{#if ext.source}<span class="tag tag-shared">{ext.source}</span>{/if}
 		</p>
 		<div class="conns mono">
-			<span class="conn" class:on={ext.connections.google}
-				>{ext.connections.google
-					? '● Google · ' + (ext.connections.googleEmail || 'connected')
-					: '○ Google · not connected'}</span
-			>
-			<span class="conn" class:on={ext.connections.notion}
-				>{ext.connections.notion
-					? '● Notion · ' + (ext.connections.notionWorkspace || 'connected')
-					: '○ Notion · not connected'}</span
-			>
+			<span class="conn" class:on={ext.connections.google}>
+				<span class="conn-logo">{@html GOOGLE_LOGO}</span>
+				Google — Gmail + Calendar · {ext.connections.google
+					? ext.connections.googleEmail || 'connected'
+					: 'not connected'}
+			</span>
+			<span class="conn" class:on={ext.connections.notion}>
+				<span class="conn-logo">{@html NOTION_LOGO}</span>
+				Notion · {ext.connections.notion
+					? ext.connections.notionWorkspace || 'connected'
+					: 'not connected'}
+			</span>
 		</div>
 
 		{#if ext.loading}
@@ -132,6 +135,7 @@
 					{#each ext.cards as c (c.source + c.title)}
 						<div class="card">
 							<div class="c-top">
+								<span class="src-logo">{@html sourceLogo(c.source)}</span>
 								<span class="tag tag-shared">{c.source}</span>
 								<span class="c-title">{c.title}</span>
 							</div>
@@ -219,10 +223,26 @@
 		font-size: 0.72rem;
 	}
 	.conn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
 		color: var(--text-faint);
 	}
 	.conn.on {
 		color: var(--patina-text);
+	}
+	.conn-logo,
+	.src-logo {
+		display: inline-flex;
+		flex-shrink: 0;
+	}
+	.conn-logo :global(svg) {
+		width: 15px;
+		height: 15px;
+	}
+	.src-logo :global(svg) {
+		width: 14px;
+		height: 14px;
 	}
 	.counts {
 		margin: 14px 0 0;

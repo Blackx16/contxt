@@ -28,6 +28,11 @@
 
 	const cards = $derived(loadCards());
 	const connected = $derived(connectedSources());
+	// Providers, grouped like the live extension: Google (Gmail + Calendar) + Notion.
+	const providerCount = $derived(
+		(connected.includes('gmail') || connected.includes('calendar') ? 1 : 0) +
+			(connected.includes('notion') ? 1 : 0)
+	);
 	const privateCount = $derived(cards.filter((c) => c.tier === 'private').length);
 	const sharedCount = $derived(cards.filter((c) => c.tier === 'shared').length);
 	const shown = $derived(filter === 'all' ? cards : cards.filter((c) => c.tier === filter));
@@ -57,8 +62,7 @@
 		<h1>Your context</h1>
 		{#if demo.on}
 			<p class="sub mono">
-				{cards.length} card{cards.length === 1 ? '' : 's'} · {connected.length} source{connected.length ===
-				1
+				{cards.length} card{cards.length === 1 ? '' : 's'} · {providerCount} source{providerCount === 1
 					? ''
 					: 's'} ·
 				<span class="c-shared">{sharedCount} shared</span> ·

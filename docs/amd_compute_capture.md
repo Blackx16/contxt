@@ -26,10 +26,19 @@ Ship gate (PRIVATE recall ≥ 0.98): cleared at 0.994.
 
 ## Evidence
 
-![rocm-smi — MI300X visible](./amd/rocm-smi.png)
-![torch.cuda + ROCm version](./amd/torch-gpu.png)
-![training loss curve](./amd/train-log.png)
-![eval table](./amd/eval-table.png)
+**AMD Instinct MI300X via `rocm-smi`, repo clone & workspace:**
+![rocm-smi — MI300X visible, repo cloned](./amd-rocm-smi.png)
+
+**ROCm PyTorch + dependency installation:**
+![ROCm PyTorch install](./amd-deps-1.png)
+![dependency install](./amd-deps-2.png)
+![dependency install](./amd-deps-3.png)
+
+**Training log with live `rocm-smi` on the MI300X:**
+![training log + rocm-smi](./amd-training-log.png)
+
+**Eval — encoder (AMD-trained) vs base, 253 hold-out rows:**
+![eval table](./amd-eval-table.png)
 
 ## Deployment note
 The deployed browser model is the Gemma 3 270M fine-tune (`chandr1601/contxt-gateway-270m-onnx`, q4f16/WASM) which achieves identical accuracy (97.6% / 99.4% recall). The AMD-trained encoder is the alternative track and demonstrates that our fine-tuning pipeline runs end-to-end on AMD ROCm — an honest, reproducible AMD compute claim.

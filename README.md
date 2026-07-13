@@ -39,6 +39,8 @@ The PRIVATE-vs-SHARED decision runs on a **fine-tuned Gemma 3 270M**, hosted at 
 
 Training code, dataset, and the single-source-of-truth prompt contract live in `finetune/` on branch `finetune/gemma-gateway-270m`.
 
+**AMD compute.** Our on-device gateway classifier was fine-tuned on an **AMD Instinct MI300X** (ROCm 7.2, PyTorch 2.9). Same accuracy as the Gemma model, 18× lower latency, 6× smaller — AMD trains it, the user's browser runs it, the cloud never sees private data. Full proof (environment, training log, `rocm-smi`, eval): [`docs/amd_compute_capture.md`](docs/amd_compute_capture.md).
+
 ## Pipeline
 Ingest (Gmail + Calendar + Notion) → Gateway (on-device tier decision) → Distill (on-device Gemma for PRIVATE / cloud gpt-oss-120B for SHARED → context cards) → Store (E2E blind relay for PRIVATE; store for SHARED) → Serve over MCP (`get_context` / `draft_reply`) → any AI.
 
