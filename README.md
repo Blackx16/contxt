@@ -4,7 +4,7 @@
 
 Portable, privacy-first context layer for every AI. Built for the **AMD Developer Hackathon ACT II** (Track 3 — Unicorn; on-device Gemma bonus).
 
-**▶ Live demo:** https://blackx16.github.io/contxt/ 
+**▶ Live demo:** https://blackx16.github.io/contxt/ /n
 **Repo:** https://github.com/Blackx16/contxt 
 **Model:** [chandr1601/contxt-gateway-270m-onnx](https://huggingface.co/chandr1601/contxt-gateway-270m-onnx)
 
