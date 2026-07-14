@@ -1,0 +1,4 @@
+## 2025-02-27 - [CSRF via Simple POST Requests on API Bridge]
+**Vulnerability:** The HTTP bridge used for MCP context handling (`server/http_bridge.py`) was vulnerable to CSRF. While it relied on CORS to prevent unauthorized reading of responses, it did not block the actual processing of cross-origin POST requests, allowing malicious sites to cause state-changing actions (e.g. LLM drafting) and exhaust resources.
+**Learning:** CORS only prevents reading the response of a cross-origin request; it does not block the browser from sending it. A simple POST request (such as via `<form>` submissions with `enctype="text/plain"`) can bypass preflight and execute its side effects if the server does not enforce `Origin` or `Content-Type` checks.
+**Prevention:** Always implement explicit validation against the `Origin` header on state-modifying requests, ensuring that any cross-origin requests are rejected before executing application logic.
