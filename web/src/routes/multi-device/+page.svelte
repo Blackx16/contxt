@@ -15,6 +15,7 @@
 
 	let pasteVal = $state('');
 	let showPaste = $state(false);
+	let busy = $state<string | null>(null);
 
 	const sameKey = $derived(!!md.fpA && !!md.fpB && md.fpA === md.fpB);
 
@@ -22,8 +23,19 @@
 		return s.length > n ? s.slice(0, n) + '…' : s;
 	}
 
+	async function runAction(id: string, action: () => Promise<void> | void) {
+		busy = id;
+		try {
+			await action();
+		} finally {
+			busy = null;
+		}
+	}
+
 	async function importPasted() {
-		await transferKey(pasteVal.trim());
+		await runAction('import', async () => {
+			await transferKey(pasteVal.trim());
+		});
 		if (!md.error) {
 			pasteVal = '';
 			showPaste = false;
@@ -39,7 +51,7 @@
 	$effect(() => {
 		if (!demo.on && !probed) {
 			probed = true;
-			detectExtension().then((p) => p && loadExtensionContext());
+			detectExtension().then((p) => { if (p) loadExtensionContext(); });
 		}
 	});
 </script>
@@ -59,7 +71,7 @@
 </section>
 
 {#if md.error}
-	<p class="banner mono">{md.error}</p>
+	<p class="banner mono" role="alert">{md.error}</p>
 {/if}
 
 <ol class="steps mono">
@@ -90,8 +102,13 @@
 
 			{#if !md.sealed}
 				<p class="dc-note mono">Plaintext on this device. Nothing has left yet.</p>
-				<button class="btn btn-primary sm" onclick={sealOnA} disabled={!md.ready}>
-					Seal · AES-256-GCM
+				<button
+					class="btn btn-primary sm"
+					onclick={() => runAction('seal', sealOnA)}
+					disabled={!md.ready || busy === 'seal'}
+					aria-busy={busy === 'seal'}
+				>
+					{busy === 'seal' ? 'Sealing…' : 'Seal · AES-256-GCM'}
 				</button>
 			{:else}
 				<div class="inset">
@@ -105,7 +122,14 @@
 					<code class="cipher mono">{md.cipherPreview}…</code>
 				</div>
 				{#if !md.pushed}
-					<button class="btn btn-primary sm" onclick={pushToRelay}>Push to relay →</button>
+					<button
+						class="btn btn-primary sm"
+						onclick={() => runAction('push', pushToRelay)}
+						disabled={busy === 'push'}
+						aria-busy={busy === 'push'}
+					>
+						{busy === 'push' ? 'Pushing…' : 'Push to relay →'}
+					</button>
 				{:else}
 					<p class="ok mono">✓ pushed to relay as ciphertext</p>
 				{/if}
@@ -178,8 +202,13 @@
 
 			{#if !md.pulled}
 				<p class="dc-note mono">Nothing here yet. Pull the ciphertext the relay is holding.</p>
-				<button class="btn btn-secondary sm" onclick={pullOnB} disabled={!md.pushed}>
-					Pull ciphertext
+				<button
+					class="btn btn-secondary sm"
+					onclick={() => runAction('pull', pullOnB)}
+					disabled={!md.pushed || busy === 'pull'}
+					aria-busy={busy === 'pull'}
+				>
+					{busy === 'pull' ? 'Pulling…' : 'Pull ciphertext'}
 				</button>
 			{:else if !md.decrypted}
 				<div class="inset">
@@ -192,7 +221,14 @@
 					</div>
 					<code class="cipher mono">{md.pulledRecord ? shorten(md.pulledRecord.ciphertext, 56) : ''}…</code>
 				</div>
-				<button class="btn btn-primary sm" onclick={decryptOnB}>Decrypt locally</button>
+				<button
+					class="btn btn-primary sm"
+					onclick={() => runAction('decrypt', decryptOnB)}
+					disabled={busy === 'decrypt'}
+					aria-busy={busy === 'decrypt'}
+				>
+					{busy === 'decrypt' ? 'Decrypting…' : 'Decrypt locally'}
+				</button>
 			{:else if md.revealed}
 				<div class="revealed">
 					{#if md.revealed.summary}<p class="rv-summary">{md.revealed.summary}</p>{/if}
@@ -211,7 +247,14 @@
 
 		{#if md.pulled && !md.transferred}
 			<div class="transfer">
-				<button class="btn btn-primary sm" onclick={() => transferKey()}>Scan Device A's QR</button>
+				<button
+					class="btn btn-primary sm"
+					onclick={() => runAction('scan', async () => transferKey())}
+					disabled={busy === 'scan'}
+					aria-busy={busy === 'scan'}
+				>
+					{busy === 'scan' ? 'Scanning…' : "Scan Device A's QR"}
+				</button>
 				<button class="btn-link mono" onclick={() => (showPaste = !showPaste)}>
 					{showPaste ? 'cancel' : 'or paste key envelope'}
 				</button>
@@ -220,10 +263,16 @@
 						class="paste mono"
 						bind:value={pasteVal}
 						placeholder="Paste the key envelope from Device A…"
+						aria-label="Key envelope from Device A"
 						rows="3"
 					></textarea>
-					<button class="btn btn-secondary sm" onclick={importPasted} disabled={!pasteVal.trim()}>
-						Import key
+					<button
+						class="btn btn-secondary sm"
+						onclick={importPasted}
+						disabled={!pasteVal.trim() || busy === 'import'}
+						aria-busy={busy === 'import'}
+					>
+						{busy === 'import' ? 'Importing…' : 'Import key'}
 					</button>
 				{/if}
 			</div>
