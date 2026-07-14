@@ -1,0 +1,4 @@
+## 2025-02-14 - [DOM XSS in Browser Extension Context Injection]
+**Vulnerability:** Found a DOM-based Cross-Site Scripting (XSS) vulnerability in `extension/content.js`. The `meta.error` message from the backend API was injected directly into the Shadow DOM via `root.innerHTML` without sanitization. If the API returned a malicious HTML string, it would be executed in the context of the host page (e.g., claude.ai or chatgpt.com).
+**Learning:** Even though the bridge API runs locally and is meant to be trusted, defensive programming dictates that any dynamic text inserted via `innerHTML` must be escaped, especially in a browser extension context script that runs on sensitive external domains.
+**Prevention:** Always use a helper function to escape HTML entities (like `<`, `>`, `&`, `"`) before injecting dynamic values into a template string assigned to `innerHTML`.
