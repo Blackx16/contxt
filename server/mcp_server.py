@@ -192,7 +192,7 @@ def _get_cards() -> list[ContextCard]:
     return cards
 
 
-def _score_card(card: ContextCard, tokens: list[str]) -> float:
+def _score_card(card: ContextCard, tokens: list[str], pattern: re.Pattern | None = None) -> float:
     """Word-boundary keyword score across all text fields of a card."""
     parts = [card.title]
     if card.summary:
@@ -209,8 +209,17 @@ def _score_card(card: ContextCard, tokens: list[str]) -> float:
     if not any(t in haystack for t in tokens):
         return 0.0
 
-    words = set(re.findall(r"\w+", haystack))
-    hits = sum(1 for t in tokens if t in words)
+    # ⚡ Bolt Optimization: Targeted matching instead of full extraction.
+    # Pre-compile the pattern in the caller to avoid re-compiling per card.
+    # Use the pattern to find all occurrences of the specific tokens we care about
+    # instead of extracting all words in the document using re.findall(r"\w+", haystack).
+    # Finding all words creates massive temporary lists for long card bodies.
+    if pattern:
+        hits = len(set(pattern.findall(haystack)))
+    else:
+        words = set(re.findall(r"\w+", haystack))
+        hits = sum(1 for t in tokens if t in words)
+
     if hits == 0:
         return 0.0
     boost = 0.05 if card.tier == Tier.SHARED else 0.0
@@ -232,7 +241,10 @@ def _search_cards(query: str, limit: int = 8) -> list[ContextCard]:
         shared = [c for c in cards if c.tier == Tier.SHARED]
         return sorted(shared, key=lambda c: c.created_at, reverse=True)[:limit]
 
-    scored = [(c, _score_card(c, tokens)) for c in cards]
+    # Pre-compile the regex once per query to be used across all score calculations
+    pattern = re.compile(r"\b(?:%s)\b" % "|".join(map(re.escape, tokens)))
+
+    scored = [(c, _score_card(c, tokens, pattern)) for c in cards]
     ranked = sorted(scored, key=lambda x: x[1], reverse=True)
     matched = [c for c, s in ranked if s > 0]
 
