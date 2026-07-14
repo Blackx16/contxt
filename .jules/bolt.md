@@ -1,0 +1,3 @@
+## 2024-05-19 - Regex full extraction bottleneck in _score_card
+**Learning:** For keyword matching over large text corpora (like context card content), extracting all document words via `re.findall(r"\w+", haystack)` generates massive temporary lists and is highly inefficient. The length of the context cards body can make the set allocation very slow.
+**Action:** Always prefer targeted matching using dynamically compiled word-boundary regex for the required tokens (e.g., `re.compile(r"\b(?:token1|token2)\b")`). Pass the pre-compiled pattern to internal scoring functions instead of tokenizing the entire haystack.
