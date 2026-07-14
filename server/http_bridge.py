@@ -192,6 +192,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
+        origin = self.headers.get("Origin")
+        if origin and not _is_allowed_origin(origin):
+            return self._json({"error": "forbidden origin"}, 403)
+
         parsed = urlparse(self.path)
         route = parsed.path.rstrip("/") or "/"
         params = parse_qs(parsed.query)
@@ -219,6 +223,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
         return self._json({"error": f"unknown route {route}"}, 404)
 
     def do_POST(self) -> None:  # noqa: N802
+        origin = self.headers.get("Origin")
+        if origin and not _is_allowed_origin(origin):
+            return self._json({"error": "forbidden origin"}, 403)
+
         route = urlparse(self.path).path.rstrip("/") or "/"
         length = int(self.headers.get("Content-Length", "0") or "0")
         raw = self.rfile.read(length) if length else b"{}"
