@@ -1,0 +1,3 @@
+## 2024-05-15 - ARIA toggle and pressed states missing for custom visual button states
+**Learning:** Custom UI components in this app (like the tag/chip filters and chip toggle buttons) often use a visual `class:active` property to indicate state, but lack semantic ARIA attributes like `aria-pressed` or `aria-expanded`.
+**Action:** When creating or modifying button groups or toggle buttons, ensure `aria-pressed` and `aria-expanded` are synced with visual state toggles, and use `role="group"` on their containers when appropriate to group filters.
