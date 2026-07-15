@@ -209,8 +209,9 @@ def _score_card(card: ContextCard, tokens: list[str]) -> float:
     if not any(t in haystack for t in tokens):
         return 0.0
 
-    words = set(re.findall(r"\w+", haystack))
-    hits = sum(1 for t in tokens if t in words)
+    # ⚡ Bolt Optimization: Avoid allocating words set and re.findall.
+    # Fast regex word-boundary check for each token.
+    hits = sum(1 for t in tokens if re.search(r"\b" + re.escape(t) + r"\b", haystack))
     if hits == 0:
         return 0.0
     boost = 0.05 if card.tier == Tier.SHARED else 0.0
