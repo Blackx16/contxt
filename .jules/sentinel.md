@@ -1,0 +1,4 @@
+## 2025-01-28 - [XSS via DOM innerHTML Assignment]
+**Vulnerability:** XSS vulnerability identified in `extension/content.js` where user input/dynamic state was being unsafely injected into DOM using `.innerHTML`.
+**Learning:** Vanilla JS template literals with `.innerHTML` are vulnerable to XSS if dynamic fields, like error objects (`meta.error`) or dynamic labels (`HOST.label`), contain unescaped user input or unexpected DOM structures.
+**Prevention:** Always use a simple HTML escape function (`esc`) to sanitize dynamic strings that are constructed via string templates prior to assigning them to `innerHTML`. Better yet, use `textContent` where applicable, or leverage safer DOM manipulation APIs.
