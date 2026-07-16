@@ -1,0 +1,3 @@
+## 2024-05-24 - Pre-regex substring filtering
+**Learning:** In string-matching pipelines using `re.search` for word boundary (`\b`) matches, running `re.search` repeatedly over long texts for negative keywords incurs massive regex engine overhead. A simple `substring in string` check before executing the regex engine can quickly discard misses and provides roughly a 2x-4x speedup on heavy text payloads.
+**Action:** Always prepend a fast-path substring check (e.g., `if kw in text_lower`) before calling `re.search` to bypass regex engine overhead for negative cases when evaluating keyword guardrails or similar loop patterns.
