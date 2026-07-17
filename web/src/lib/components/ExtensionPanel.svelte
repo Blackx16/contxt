@@ -122,9 +122,9 @@
 				</section>
 			{/if}
 
-			<div class="filters mono">
+			<div class="filters mono" role="group" aria-label="Filter cards">
 				{#each filters as f (f.id)}
-					<button class="chip" class:active={filter === f.id} onclick={() => (filter = f.id)}>
+					<button class="chip" class:active={filter === f.id} aria-pressed={filter === f.id} onclick={() => (filter = f.id)}>
 						{f.label}
 					</button>
 				{/each}
