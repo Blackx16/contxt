@@ -1,0 +1,4 @@
+## 2025-07-17 - [Fix XSS Vulnerability in Extension Content Script]
+**Vulnerability:** XSS vulnerability in `extension/content.js` where user input/error messages were directly interpolated into a template literal assigned to `.innerHTML` without sanitization.
+**Learning:** Even internal variables like `meta.error` that represent error states should not be trusted if they originate from processes out of your control, as they can contain arbitrary HTML and execute maliciously.
+**Prevention:** Always use a utility function (e.g., `esc(s)`) to encode HTML entities when interpolating variables into `.innerHTML`, or avoid using `.innerHTML` when setting text content via `.textContent` is viable.
