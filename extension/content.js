@@ -123,6 +123,8 @@
 
   // ── Build the injected context block ─────────────────────────────────────────
 
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
   const clip = (s, n) => {
     s = (s || '').replace(/\s+/g, ' ').trim();
     return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
@@ -259,13 +261,13 @@
         <div class="body">
           ${
             errored
-              ? `<div class="err">Couldn't reach Contxt (${clip(meta.error, 60)}).</div>`
+              ? `<div class="err">Couldn't reach Contxt (${esc(clip(meta.error, 60))}).</div>`
               : `
             <div class="row"><span class="k">→ this AI</span>
-              <span class="v shared">${shared} shared card${shared === 1 ? '' : 's'} injected</span></div>
+              <span class="v shared">${esc(shared)} shared card${shared === 1 ? '' : 's'} injected</span></div>
             <div class="row"><span class="k">🔒 on-device</span>
-              <span class="v gold">${priv} private kept private</span></div>
-            <div class="note">Injected into ${HOST.label}${src}. Crown jewels never left your device.</div>`
+              <span class="v gold">${esc(priv)} private kept private</span></div>
+            <div class="note">Injected into ${esc(HOST.label)}${src}. Crown jewels never left your device.</div>`
           }
           <button class="re" id="reinject">${errored ? 'Retry' : 'Re-inject'}</button>
         </div>

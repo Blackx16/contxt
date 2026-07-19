@@ -39,7 +39,9 @@
 	$effect(() => {
 		if (!demo.on && !probed) {
 			probed = true;
-			detectExtension().then((p) => p && loadExtensionContext());
+			detectExtension().then((p) => {
+				if (p) loadExtensionContext();
+			});
 		}
 	});
 </script>
