@@ -171,7 +171,7 @@ async function loadContext() {
     }
     const priv = resp.private_total ?? resp.private_withheld ?? 0;
     const src = resp.source === 'fixture' ? ' <span class="muted">(offline demo data)</span>' : '';
-    $('privLine').innerHTML = `🔒 <b>${priv}</b> private item(s) kept on-device — never sent to any AI.${src}`;
+    $('privLine').innerHTML = `🔒 <b>${esc(priv)}</b> private item(s) kept on-device — never sent to any AI.${src}`;
   } catch (e) {
     $('ctxList').innerHTML = `<div class="muted">Bridge unavailable: ${esc(e.message || e)}</div>`;
     $('privLine').innerHTML = '';
@@ -272,7 +272,7 @@ function renderLive(shared, privateItems, total, errors) {
 
   const errLine = errors.length ? ` <span class="muted">· ${esc(errors.join(' · '))}</span>` : '';
   $('privLine').innerHTML =
-    `🔒 <b>${privateItems.length}</b> private item(s) kept on-device — never sent to any AI.` +
+    `🔒 <b>${esc(privateItems.length)}</b> private item(s) kept on-device — never sent to any AI.` +
     ` <span class="muted">· live from your accounts</span>${errLine}`;
 }
 
