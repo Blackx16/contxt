@@ -123,6 +123,8 @@
 
   // ── Build the injected context block ─────────────────────────────────────────
 
+  const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
   const clip = (s, n) => {
     s = (s || '').replace(/\s+/g, ' ').trim();
     return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
@@ -259,7 +261,7 @@
         <div class="body">
           ${
             errored
-              ? `<div class="err">Couldn't reach Contxt (${clip(meta.error, 60)}).</div>`
+              ? `<div class="err">Couldn't reach Contxt (${esc(clip(meta.error, 60))}).</div>`
               : `
             <div class="row"><span class="k">→ this AI</span>
               <span class="v shared">${shared} shared card${shared === 1 ? '' : 's'} injected</span></div>
