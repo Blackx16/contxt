@@ -202,6 +202,8 @@
       'position:fixed;right:16px;bottom:16px;z-index:2147483647;';
     const root = badgeHost.attachShadow({ mode: 'open' });
 
+    const esc = (s) => String(s).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
+
     const shared = meta.sharedCount ?? 0;
     const priv = meta.private_total ?? meta.private_withheld ?? 0;
     const src = meta.source === 'fixture' ? ' · demo data' : '';
@@ -259,13 +261,13 @@
         <div class="body">
           ${
             errored
-              ? `<div class="err">Couldn't reach Contxt (${clip(meta.error, 60)}).</div>`
+              ? `<div class="err">Couldn't reach Contxt (${esc(clip(meta.error, 60))}).</div>`
               : `
             <div class="row"><span class="k">→ this AI</span>
-              <span class="v shared">${shared} shared card${shared === 1 ? '' : 's'} injected</span></div>
+              <span class="v shared">${esc(shared)} shared card${shared === 1 ? '' : 's'} injected</span></div>
             <div class="row"><span class="k">🔒 on-device</span>
-              <span class="v gold">${priv} private kept private</span></div>
-            <div class="note">Injected into ${HOST.label}${src}. Crown jewels never left your device.</div>`
+              <span class="v gold">${esc(priv)} private kept private</span></div>
+            <div class="note">Injected into ${esc(HOST.label)}${esc(src)}. Crown jewels never left your device.</div>`
           }
           <button class="re" id="reinject">${errored ? 'Retry' : 'Re-inject'}</button>
         </div>
