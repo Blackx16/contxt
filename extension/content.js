@@ -128,6 +128,8 @@
     return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
   };
 
+  const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
+
   function buildContextText(cards, meta) {
     const lines = ['My context (via Contxt — portable, privacy-first):'];
     for (const c of cards) {
@@ -259,7 +261,7 @@
         <div class="body">
           ${
             errored
-              ? `<div class="err">Couldn't reach Contxt (${clip(meta.error, 60)}).</div>`
+              ? `<div class="err">Couldn't reach Contxt (${esc(clip(meta.error, 60))}).</div>`
               : `
             <div class="row"><span class="k">→ this AI</span>
               <span class="v shared">${shared} shared card${shared === 1 ? '' : 's'} injected</span></div>
