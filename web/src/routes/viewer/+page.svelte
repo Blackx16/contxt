@@ -80,19 +80,20 @@
 				class:active={activeRules > 0}
 				onclick={() => (showPrivacy = !showPrivacy)}
 				title="Privacy controls"
+				aria-expanded={showPrivacy}
 			>
 				Privacy rules{activeRules > 0 ? ` · ${activeRules}` : ''}
 			</button>
 		{/if}
 		{#if cryptoReady.value}
-			<button class="chip chip-key" onclick={() => (showKey = !showKey)} title="Key management">
+			<button class="chip chip-key" onclick={() => (showKey = !showKey)} title="Key management" aria-expanded={showKey}>
 				🔑 {showKey ? 'Hide key' : 'Key sync'}
 			</button>
 		{/if}
 		{#if cards.length}
-			<div class="filters">
+			<div class="filters" role="group" aria-label="Filter context">
 				{#each filters as f (f.id)}
-					<button class="chip" class:active={filter === f.id} onclick={() => (filter = f.id)}>
+					<button class="chip" class:active={filter === f.id} aria-pressed={filter === f.id} onclick={() => (filter = f.id)}>
 						{f.label}
 					</button>
 				{/each}
