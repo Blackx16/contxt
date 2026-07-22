@@ -194,6 +194,10 @@
 
   let badgeHost = null;
 
+  const esc = (s) => (s || '').toString().replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
+
   function renderBadge(meta) {
     if (badgeHost) badgeHost.remove();
     badgeHost = document.createElement('div');
@@ -259,7 +263,7 @@
         <div class="body">
           ${
             errored
-              ? `<div class="err">Couldn't reach Contxt (${clip(meta.error, 60)}).</div>`
+              ? `<div class="err">Couldn't reach Contxt (${esc(clip(meta.error, 60))}).</div>`
               : `
             <div class="row"><span class="k">→ this AI</span>
               <span class="v shared">${shared} shared card${shared === 1 ? '' : 's'} injected</span></div>
