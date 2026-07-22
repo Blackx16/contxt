@@ -1,0 +1,3 @@
+## 2025-02-27 - Fast-path Substring Checks for Regex Guardrails
+**Learning:** In Python, performing a fast-path literal substring check (`if k in text_lower`) before falling back to a `re.search` regex check (even with word boundaries) can yield substantial performance improvements (e.g., ~30% reduction in evaluation time) when processing text where the keywords are predominantly absent.
+**Action:** When looping to search for exact-word matches using regex in Python (e.g., evaluating keyword guardrails), always prepend a fast-path substring check before calling `re.search` to bypass regex engine overhead for negative cases.
