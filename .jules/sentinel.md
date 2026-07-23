@@ -1,0 +1,4 @@
+## 2024-07-23 - DOM XSS in Extension Content Script
+**Vulnerability:** Found unescaped variables being directly interpolated into an HTML string assigned to `innerHTML` within `extension/content.js` (used to build the shadow DOM badge UI). Variables like `meta.error` could potentially contain malicious payloads if the upstream context fetching mechanism is compromised.
+**Learning:** Even within relatively isolated components like browser extension content scripts and shadow DOMs, dynamically constructed HTML strings must always sanitize untrusted or dynamic input. The project had an `esc` helper in `extension/popup.js` but it was missing in `extension/content.js`.
+**Prevention:** Always implement and use HTML escaping functions when building HTML strings manually, especially before assigning to `innerHTML`. Share utility functions across extension scripts if possible to avoid duplication and omissions.
