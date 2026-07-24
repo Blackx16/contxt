@@ -34,6 +34,7 @@
 					<a
 						class="nav-link"
 						class:active={page.url.pathname.startsWith(base + item.href)}
+						aria-current={page.url.pathname.startsWith(base + item.href) ? 'page' : null}
 						href="{base}{item.href}">{item.label}</a
 					>
 				{/each}
