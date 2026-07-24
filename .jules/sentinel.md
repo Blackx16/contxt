@@ -1,0 +1,4 @@
+## 2024-05-18 - XSS via unescaped innerHTML in DOM injection
+**Vulnerability:** Cross-Site Scripting (XSS) vulnerability in `extension/content.js` where `meta.error` was injected directly into `innerHTML` without HTML escaping.
+**Learning:** When using `.innerHTML` to render dynamic content, especially error messages or data fetched from external sources (even internal APIs if data is compromised upstream), it's crucial to always escape HTML entities to prevent DOM-based XSS. The extension popup correctly used an `esc` function, but the content script missed this.
+**Prevention:** Always sanitize dynamic variables using an HTML escaping function before injecting them via `.innerHTML`. Consider using `textContent` instead where HTML structure is not required, or centralize an escaping utility across extension components.
