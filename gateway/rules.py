@@ -49,8 +49,11 @@ def rule_hits(text, private_keywords=None):
     # Keyword hits are case-insensitive WORD-boundary matches, not substrings, so
     # "emi" fires on the loan term but not inside "reminder"/"premium". Still
     # catches the whole keyword anywhere in the text; mixed-case toggles work too.
+    text_lower = text.lower()
     for kw in private_keywords:
         k = str(kw).lower()
-        if re.search(r"\b" + re.escape(k) + r"\b", text, re.I):
-            hits.append(f"kw:{k}")
+        # Fast-path substring check before running the regex engine
+        if k in text_lower:
+            if re.search(r"\b" + re.escape(k) + r"\b", text, re.I):
+                hits.append(f"kw:{k}")
     return hits
